@@ -1,0 +1,31 @@
+# 의존성·빌드 결과
+node_modules/
+dist/
+*.tsbuildinfo
+
+# 비밀 값 (절대 커밋하지 않음)
+.env
+.env.*
+!.env.example
+supabase/.env
+.dev.vars
+
+# Supabase CLI 로컬 상태
+supabase/.temp/
+supabase/.branches/
+
+# 테스트 결과
+coverage/
+test-results/
+playwright-report/
+playwright/.cache/
+
+# 로컬 도구 상태
+.omc/
+.claude/settings.local.json
+
+# 운영체제·편집기
+.DS_Store
+Thumbs.db
+.vscode/*
+!.vscode/extensions.json
