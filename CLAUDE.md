@@ -26,7 +26,7 @@ npm run dev                 # 개발 서버 (http://localhost:5173/book-chronicl
 npm run build               # 배포용 빌드 (dist/)
 npm run preview             # 빌드 결과 미리 보기
 npm run check               # svelte-check + TypeScript 타입 검사
-npm run lint                # ESLint + Prettier 검사
+npm run lint                # ESLint + Prettier 검사 (npm run format으로 자동 정리)
 npm run test                # Vitest 단위 테스트
 npm run test:e2e            # Playwright E2E 테스트
 ```

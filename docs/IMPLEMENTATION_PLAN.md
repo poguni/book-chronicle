@@ -72,19 +72,19 @@
 ## Phase 1. 프로젝트 골격과 배포 파이프라인
 **목표**: 빈 Svelte 5 앱이 GitHub Pages 주소에서 열린다.
 
-- [ ] Vite + Svelte 5 + TypeScript 프로젝트 생성(`npm create vite@latest . -- --template svelte-ts`), Svelte 5 버전 확인
-- [ ] `vite.config.ts`에 `base: '/book-chronicle/'` 설정(저장소 이름과 같게)
-- [ ] Supabase CLI를 개발 의존성으로 설치(`npm i -D supabase`)
-- [ ] TypeScript `strict`, `svelte-check`, ESLint + Prettier 설정
-- [ ] Vitest(단위 테스트), Playwright(E2E) 설정과 샘플 테스트 1개씩
-- [ ] `package.json` 스크립트: `dev`, `build`, `preview`, `check`, `lint`, `test`, `test:e2e`
-- [ ] PRD 9장 폴더 구조대로 빈 폴더와 자리 파일 생성
-- [ ] 해시 라우터(아주 작은 자체 구현 또는 가벼운 라이브러리)와 빈 화면 6개(Login, Shelves, Compare, Recap, Import, Settings)
-- [ ] `.env.example`(`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`)
-- [ ] `.github/workflows/deploy.yml`: `main` push → 설치 → `check`·`test` → 빌드 → GitHub Pages 배포
-  - Supabase 주소·공개 키는 GitHub 저장소 **Variables**에 넣고 빌드 시 주입
-- [ ] GitHub 저장소 설정 → Pages → 배포 소스를 "GitHub Actions"로 지정
-- [ ] `README.md`: 설치, 실행, 배포 방법
+- [x] Vite + Svelte 5 + TypeScript 프로젝트 생성(공식 `svelte-ts` 템플릿 구성을 기준으로 직접 작성), Svelte 5.57 확인
+- [x] `vite.config.ts`에 `base: '/book-chronicle/'` 설정(저장소 이름과 같게)
+- [x] Supabase CLI를 개발 의존성으로 설치(`npm i -D supabase`, 3.0.0)
+- [x] TypeScript `strict`, `svelte-check`, ESLint + Prettier 설정
+- [x] Vitest(단위 테스트), Playwright(E2E) 설정과 샘플 테스트 1개씩
+- [x] `package.json` 스크립트: `dev`, `build`, `preview`, `check`, `lint`, `test`, `test:e2e` (+ `format`)
+- [x] PRD 9장 폴더 구조대로 빈 폴더와 자리 파일 생성
+- [x] 해시 라우터(아주 작은 자체 구현)와 빈 화면 7개(Login, Shelves, Compare, Recap, Import, Settings + 전체 목록 List)
+- [x] `.env.example`(`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`)
+- [x] `.github/workflows/deploy.yml`: `main` push → 설치 → `check`·`lint`·`test` → 빌드 → GitHub Pages 배포 (PR에서는 검사·빌드만)
+  - Supabase 주소·공개 키는 GitHub 저장소 **Variables**에 넣고 빌드 시 주입 (값 등록은 Phase 2에서 사용자가)
+- [ ] GitHub 저장소 설정 → Pages → 배포 소스를 "GitHub Actions"로 지정 (사용자)
+- [x] `README.md`: 설치, 실행, 배포 방법
 
 **완료 기준**: `https://poguni.github.io/book-chronicle/`에서 빈 앱이 열리고, `#/compare` 같은 해시 주소로 화면이 바뀐다. CI가 통과한다.
 

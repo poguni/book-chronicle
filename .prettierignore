@@ -1,0 +1,14 @@
+# 문서·시안은 사람이 직접 관리하므로 자동 정렬하지 않습니다.
+docs/
+design/
+*.md
+
+dist/
+node_modules/
+package-lock.json
+coverage/
+test-results/
+playwright-report/
+supabase/.temp/
+.omc/
+.claude/
