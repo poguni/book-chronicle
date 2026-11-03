@@ -83,7 +83,8 @@
 - [x] `.env.example`(`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`)
 - [x] `.github/workflows/deploy.yml`: `main` push → 설치 → `check`·`lint`·`test` → 빌드 → GitHub Pages 배포 (PR에서는 검사·빌드만)
   - Supabase 주소·공개 키는 GitHub 저장소 **Variables**에 넣고 빌드 시 주입 (값 등록은 Phase 2에서 사용자가)
-- [ ] GitHub 저장소 설정 → Pages → 배포 소스를 "GitHub Actions"로 지정 (사용자)
+- [x] GitHub 저장소 설정 → Pages → 배포 소스를 "GitHub Actions"로 지정 (사용자)
+- [x] **완료 확인(2026-11-04)**: 배포 주소에서 `#/compare` 화면 전환 확인
 - [x] `README.md`: 설치, 실행, 배포 방법
 
 **완료 기준**: `https://poguni.github.io/book-chronicle/`에서 빈 앱이 열리고, `#/compare` 같은 해시 주소로 화면이 바뀐다. CI가 통과한다.
@@ -97,27 +98,31 @@
 **목표**: 로그인한 본인만 자기 데이터를 읽고 쓸 수 있다.
 
 ### 2-1. 마이그레이션 (PRD 5.4, 5.5, 7장)
-- [ ] `supabase init`, `supabase link`(기존 공유 프로젝트)
-- [ ] `0001_bookchronicle_schema.sql`: 스키마, 테이블 5개(`books`, `readings`, `years`, `settings`, `aladin_cache`), 인덱스, `updated_at` 자동 갱신 트리거
-- [ ] `0002_bookchronicle_rls.sql`: 모든 테이블 RLS + 본인 행 정책, `authenticated`에만 권한, `aladin_cache`는 정책 없음
-- [ ] `0003_bookchronicle_storage.sql`: 비공개 버킷 `bookchronicle-covers`, 경로 첫 폴더 = `auth.uid()` 정책
-- [ ] **사용자 확인 후** `supabase db push`
-- [ ] Supabase 대시보드 → API 설정 → 노출 스키마(Exposed schemas)에 `bookchronicle` 추가
+- [x] `supabase init`
+- [x] `supabase link`(기존 공유 프로젝트) — 사용자가 `npx supabase login`, `npx supabase link --project-ref <ref>` 실행
+- [x] `0001_bookchronicle_schema.sql`: 스키마, 테이블 5개(`books`, `readings`, `years`, `settings`, `aladin_cache`), 인덱스, `updated_at` 자동 갱신 트리거
+- [x] `0002_bookchronicle_rls.sql`: 모든 테이블 RLS + 본인 행 정책, `authenticated`에만 권한, `aladin_cache`는 정책 없음
+- [x] `0003_bookchronicle_storage.sql`: 비공개 버킷 `bookchronicle-covers`, 경로 첫 폴더 = `auth.uid()` 정책
+- [x] **사용자 확인 후** `supabase db push` (2026-11-04, 3개 적용. RLS·권한·버킷 조회로 확인, 보안 점검은 `aladin_cache` 정책 없음(의도) 1건만)
+- [x] Supabase 대시보드 → API 설정 → 노출 스키마(Exposed schemas)에 `bookchronicle` 추가 (사용자)
 - ~~Auth → Redirect URLs 추가~~ → 하지 않음. 이메일 + 비밀번호 로그인은 돌아오는 주소가 필요 없음(Phase 0 결정)
-- [ ] `supabase gen types`로 `src/lib/database.types.ts` 생성
+- [x] `supabase gen types`로 `src/lib/database.types.ts` 생성
 
 ### 2-2. 앱 연결
-- [ ] `src/lib/supabase.ts`: 클라이언트 생성(`db: { schema: 'bookchronicle' }`)
-- [ ] `src/lib/auth.ts`: 세션 상태(`$state`), 로그인·로그아웃, 세션 변경 구독
-- [ ] 로그인 화면(DESIGN 7.4): 작은 책장 그림, 환영 문구, 이메일·비밀번호, 오류 문구
-- [ ] 로그인하지 않으면 모든 화면이 로그인 화면으로 이동, 로그인 후 원래 화면으로 복귀
-- [ ] 첫 로그인 시 `settings` 행 자동 생성
+- [x] `src/lib/supabase.ts`: 클라이언트 생성(`db: { schema: 'bookchronicle' }`, 세션 저장 이름 `bookchronicle-auth`)
+- [x] `src/lib/auth.svelte.ts`: 세션 상태(`$state`), 로그인·로그아웃, 세션 변경 구독 (오류 문구 변환은 `authErrors.ts` + 단위 테스트)
+- [x] 로그인 화면(DESIGN 7.4): 작은 책장 그림, 환영 문구, 이메일·비밀번호, 오류 문구
+- [x] 로그인하지 않으면 모든 화면이 로그인 화면으로 이동, 로그인 후 원래 화면으로 복귀 (E2E, 가짜 인증 응답)
+- [x] 첫 로그인 시 `settings` 행 자동 생성 (`src/lib/data/settings.ts`)
+- [x] GitHub 저장소 **Repository** Variables에 `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` 등록 (사용자)
+- [x] 실제 계정으로 로컬 로그인 확인(2026-11-04): 원래 화면 복귀, `settings` 행 생성(201), 새로 고침 후 세션 유지, 로그아웃
 
-### 2-3. 보안 테스트
-- [ ] 로그아웃 상태(anon)로 `bookchronicle.books` 조회 → 0건 또는 거부
-- [ ] 다른 계정(테스트용)이 내 행을 볼 수 없음 확인(가능하면 로컬 Supabase에서)
-- [ ] Storage: 다른 사용자 경로 접근 거부 확인
-- [ ] 기존 앱이 평소대로 동작하는지 확인
+### 2-3. 보안 테스트 (`npm run check:rls`, 원격에서 실행 — 2026-11-04 18개 모두 통과)
+- [x] 로그아웃 상태(anon)로 `bookchronicle.books` 조회 → 0건 또는 거부 (`permission denied for schema`)
+- [x] 다른 계정(테스트용)이 내 행을 볼 수 없음 확인 (조회·수정·삭제·사칭 추가·내 책에 기록 달기 모두 거부, 원격에서)
+- [x] Storage: 다른 사용자 경로 접근 거부 확인 (내려받기·올리기·목록 거부)
+- [ ] 기존 앱이 평소대로 동작하는지 확인 (사용자)
+- [ ] 배포된 주소에서 로그인 확인 (`main` 합친 뒤, 사용자)
 
 **완료 기준**: 배포된 주소에서 로그인할 수 있고, 로그인한 계정으로 `books` 행을 넣고 읽을 수 있으며, 로그아웃 상태에서는 읽을 수 없다. 기존 앱에 영향이 없다.
 
@@ -129,8 +134,8 @@
 ## Phase 3. 앱 셸과 디자인 시스템
 **목표**: 시안과 같은 3단 레이아웃과 서재 테마가 실제 앱에 적용된다.
 
-- [ ] `src/styles/tokens.css`, `themes.css`: DESIGN 3장의 토큰을 그대로 옮김(서재·종이 둘 다 정의, 우선 서재 적용)
-- [ ] 글꼴 불러오기(나눔명조, 함렛, Noto Sans KR)
+- [x] `src/styles/tokens.css`, `themes.css`: DESIGN 3장의 토큰을 그대로 옮김(서재·종이 둘 다 정의, 우선 서재 적용) — 로그인 화면 때문에 Phase 2에서 먼저 함(+ `base.css`)
+- [x] 글꼴 불러오기(나눔명조, 함렛, Noto Sans KR) — Phase 2에서 먼저 함
 - [ ] `App.svelte`: CSS Grid 3단(사이드바 232px / 본문 / 상세 패널 `clamp(360px, 26vw, 440px)`)
 - [ ] `Sidebar.svelte`: 로고, 책 꽂기 버튼, 메뉴 6개, 연도별 나이테(빈 상태), 보기 설정, 계정 영역(로그아웃)
 - [ ] 상단(제목, 올해 요약, 검색창, 정렬 칩) 자리

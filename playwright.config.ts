@@ -19,6 +19,11 @@ export default defineConfig({
   webServer: {
     command: 'npm run build && npm run preview -- --port 4173 --strictPort',
     url: 'http://localhost:4173/book-chronicle/',
-    reuseExistingServer: !process.env.CI,
+    reuseExistingServer: false,
+    // 진짜 Supabase 대신 아무도 듣지 않는 가짜 주소로 빌드합니다. 요청은 테스트에서 가짜 응답으로 바꿉니다.
+    env: {
+      VITE_SUPABASE_URL: 'http://127.0.0.1:54399',
+      VITE_SUPABASE_ANON_KEY: 'e2e-anon-key',
+    },
   },
 });

@@ -33,8 +33,14 @@ npm run test:e2e            # Playwright E2E 테스트
 ```bash
 supabase functions serve bookchronicle-aladin          # Edge Function 로컬 실행
 supabase functions deploy bookchronicle-aladin         # Edge Function 배포
-supabase gen types typescript --linked --schema bookchronicle > src/lib/database.types.ts
-supabase db push                                       # 마이그레이션을 원격 DB에 적용 (사용자 확인 후에만)
+npx supabase gen types typescript --remote --schema bookchronicle > src/lib/database.types.ts
+npx supabase db push --remote --dry-run                # 원격에 적용될 마이그레이션 목록만 확인
+npx supabase db push --remote                          # 마이그레이션을 원격 DB에 적용 (사용자 확인 후에만)
+npx supabase db query --remote --read-only "<SQL>"     # 원격 읽기 전용 조회
+```
+- Supabase CLI는 개발 의존성(3.x)이라 `npx supabase`로 실행합니다. 3.x는 기본 대상이 로컬 DB이므로 원격에는 `--remote`를 붙입니다.
+- `supabase login`·`link`는 대화형이라 `!`가 아닌 별도 터미널에서 실행합니다(사용자).
+```bash
 ```
 - 작업을 마치기 전에 `npm run check`, `npm run lint`, `npm run test`를 돌리고 결과를 보고합니다.
 

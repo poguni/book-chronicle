@@ -1,0 +1,8 @@
+# Windows(core.autocrlf=true)에서도 작업 폴더의 줄바꿈을 LF로 유지합니다(Prettier 검사·CI와 같게).
+* text=auto eol=lf
+
+# 바이너리
+*.png binary
+*.jpg binary
+*.webp binary
+*.pdf binary
