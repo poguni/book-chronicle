@@ -38,6 +38,7 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.118.0",
+    "chart.js": "^4.6.1",
     "papaparse": "^5.7.0"
   }
 }

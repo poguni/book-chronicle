@@ -30,3 +30,11 @@ export async function deleteAllYears(): Promise<void> {
   const { error } = await supabase.from('years').delete().not('year', 'is', null);
   if (error) throw error;
 }
+
+/** 한 줄 회고(80자) 저장. 행이 없으면 만들고, 그해의 책은 그대로 둡니다. */
+export async function setOneLiner(year: number, text: string | null): Promise<void> {
+  const { error } = await supabase
+    .from('years')
+    .upsert({ year, one_liner: text }, { onConflict: 'user_id,year' });
+  if (error) throw error;
+}

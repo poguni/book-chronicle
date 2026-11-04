@@ -5,7 +5,7 @@ import { COVER_BUCKET, deleteBook, insertBook, listBooks, updateBook } from './d
 import { uploadCover } from './data/covers';
 import { deleteReading, insertReading, listReadings, updateReading } from './data/readings';
 import { getSettings } from './data/settings';
-import { listYears, setBookOfYear } from './data/years';
+import { listYears, setBookOfYear, setOneLiner } from './data/years';
 import {
   buildShelves,
   type BookRow,
@@ -231,6 +231,12 @@ class Library {
     const current = this.years.find((y) => y.year === year)?.book_of_year ?? [];
     const next = current[0] === bookId ? [] : [bookId];
     return this.#save(() => setBookOfYear(year, next));
+  }
+
+  /** 한 줄 회고 저장(앞뒤 공백 정리, 비우면 null, 80자까지) */
+  saveOneLiner(year: number, text: string): Promise<boolean> {
+    const clean = text.trim().slice(0, 80);
+    return this.#save(() => setOneLiner(year, clean || null));
   }
 
   /** 기록이 하나뿐이면 책까지 지우고, 여러 개면 그 기록만 지웁니다. */

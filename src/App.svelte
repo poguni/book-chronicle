@@ -2,6 +2,7 @@
   import { tick, untrack } from 'svelte';
   import BackupReminder from './components/BackupReminder.svelte';
   import BookDialog, { type DialogMode } from './components/BookDialog.svelte';
+  import DecemberNotice from './components/DecemberNotice.svelte';
   import DetailPanel, { type Selection } from './components/DetailPanel.svelte';
   import OfflineBanner from './components/OfflineBanner.svelte';
   import Sidebar from './components/Sidebar.svelte';
@@ -154,7 +155,7 @@
 
     <main class="main">
       <OfflineBanner />
-      {#if router.route.name === 'shelves'}<BackupReminder />{/if}
+      {#if router.route.name === 'shelves'}<BackupReminder /><DecemberNotice {today} />{/if}
       {#if router.route.name === 'compare'}
         <Compare />
       {:else if router.route.name === 'recap'}

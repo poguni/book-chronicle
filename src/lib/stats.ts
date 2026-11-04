@@ -121,3 +121,131 @@ export function yearRings(
   discs.push({ size: CENTER, background: 'var(--accent)' });
   return { discs, years: years.map((s) => s.year) };
 }
+
+// ── 연도 비교 (PRD F5, 결정 0013) ──
+
+/** 책장이 있는(책이 1권 이상인) 연도, 최신이 앞. 올해는 비어 있어도 넣습니다. */
+export function yearsWithBooks(shelves: readonly ShelfYear[], currentYear: number): number[] {
+  const years = new Set<number>([currentYear]);
+  for (const s of shelves)
+    if (s.kind === 'year' && s.year !== null && s.count > 0) years.add(s.year);
+  return [...years].sort((a, b) => b - a);
+}
+
+export type YearStats = {
+  year: number;
+  books: number;
+  /** 쪽수를 아는 책만 더한 쪽수 */
+  totalPages: number;
+  averagePages: number | null;
+  averageRating: number | null;
+  thickest: { title: string; pages: number } | null;
+  topCategory: string | null;
+};
+
+export function yearStats(shelves: readonly ShelfYear[], year: number): YearStats {
+  const spines = shelfOf(shelves, year)?.spines ?? [];
+  const known = spines.filter(
+    (s): s is ShelfSpine & { knownPages: number } => s.knownPages !== null,
+  );
+  const totalPages = known.reduce((n, s) => n + s.knownPages, 0);
+  const thick = known.reduce<ShelfSpine | null>(
+    (best, s) => (!best || s.knownPages! > best.knownPages! ? s : best),
+    null,
+  );
+  return {
+    year,
+    books: spines.length,
+    totalPages,
+    averagePages: known.length > 0 ? Math.round(totalPages / known.length) : null,
+    averageRating: averageRating(spines),
+    thickest: thick ? { title: thick.title, pages: thick.knownPages! } : null,
+    topCategory: topCategory(spines),
+  };
+}
+
+/** 증감: 차이와 %(이전 값이 0이거나 없으면 % 없음) */
+export function change(
+  now: number | null,
+  before: number | null,
+): { delta: number; percent: number | null } | null {
+  if (now === null || before === null) return null;
+  const delta = Math.round((now - before) * 10) / 10;
+  return { delta, percent: before === 0 ? null : Math.round(((now - before) / before) * 100) };
+}
+
+/** 월별 권수 또는 쪽수 12칸. cumulative면 1월부터 쌓은 값(연중 페이스) */
+export function monthlySeries(
+  spines: readonly ShelfSpine[],
+  metric: 'books' | 'pages',
+  cumulative: boolean,
+): number[] {
+  const values = Array.from({ length: 12 }, () => 0);
+  for (const s of spines) {
+    const m = s.finishedAt ? Number(s.finishedAt.slice(5, 7)) : NaN;
+    if (m >= 1 && m <= 12) values[m - 1]! += metric === 'books' ? 1 : (s.knownPages ?? 0);
+  }
+  if (cumulative) for (let i = 1; i < 12; i++) values[i]! += values[i - 1]!;
+  return values;
+}
+
+export const OTHER_CATEGORY = '기타';
+
+/**
+ * 분야 비중 (PRD F5): 연도마다 분야별 권수. 분야는 모든 연도를 합쳐 많은 순 상위 top개 + 기타
+ * (분야 없음 포함). 분야 순서·색이 고른 연도에 따라 바뀌지 않도록 전체 연도로 순위를 정합니다.
+ */
+export function categoryShares(
+  shelves: readonly ShelfYear[],
+  years: readonly number[],
+  top = 6,
+): { categories: string[]; rows: { year: number; counts: number[]; total: number }[] } {
+  const all = new Map<string, number>();
+  for (const s of shelves)
+    if (s.kind === 'year')
+      for (const sp of s.spines)
+        if (sp.category) all.set(sp.category, (all.get(sp.category) ?? 0) + 1);
+  const ranked = [...all].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'ko'));
+  const named = ranked.slice(0, top).map(([c]) => c);
+  const rows = years.map((year) => {
+    const spines = shelfOf(shelves, year)?.spines ?? [];
+    const counts = Array.from({ length: named.length + 1 }, () => 0);
+    for (const sp of spines) {
+      const i = sp.category ? named.indexOf(sp.category) : -1;
+      counts[i >= 0 ? i : named.length]! += 1;
+    }
+    return { year, counts, total: spines.length };
+  });
+  const hasOther = rows.some((r) => r.counts[named.length]! > 0);
+  return {
+    categories: hasOther ? [...named, OTHER_CATEGORY] : named,
+    rows: hasOther ? rows : rows.map((r) => ({ ...r, counts: r.counts.slice(0, named.length) })),
+  };
+}
+
+/**
+ * 그해의 책 후보 (PRD F6): 고르지 않은 해에 별점이 가장 높은 책을 제안만 합니다.
+ * 같으면 나중에 읽은 책. 별점이 하나도 없으면 null
+ */
+export function bookOfYearCandidate(
+  shelves: readonly ShelfYear[],
+  year: number,
+): ShelfSpine | null {
+  const rated = (shelfOf(shelves, year)?.spines ?? []).filter((s) => s.rating !== null);
+  return rated.reduce<ShelfSpine | null>((best, s) => {
+    if (!best) return s;
+    if (s.rating! !== best.rating!) return s.rating! > best.rating! ? s : best;
+    return (s.finishedAt ?? '') >= (best.finishedAt ?? '') ? s : best;
+  }, null);
+}
+
+/**
+ * 12월 안내를 띄울 때인지 (PRD F6): 12월이고, 올해 책이 있고, 그해의 책을 아직 고르지 않았고,
+ * 이 기기에서 올해 한 번도 보여 주지 않았을 때
+ */
+export function decemberNoticeDue(
+  today: Date,
+  p: { booksThisYear: number; bookOfYearChosen: boolean; seen: boolean },
+): boolean {
+  return today.getMonth() === 11 && p.booksThisYear > 0 && !p.bookOfYearChosen && !p.seen;
+}

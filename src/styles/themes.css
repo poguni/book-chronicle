@@ -22,6 +22,15 @@
   --font-display: 'Gowun Dodum', 'Noto Sans KR', sans-serif; /* 결정 0010 */
   --display-weight: 400; /* 고운 돋움은 굵기가 400 하나 */
   --book-shadow: 0 18px 30px rgba(0, 0, 0, 0.5);
+  /* 연도 비교 계열 색 (dataviz 기본 팔레트 어두운 단계, 카드 바탕 #2e231b에서 검증, 결정 0013) */
+  --series-1: #3987e5;
+  --series-2: #d95926;
+  --series-3: #199e70;
+  --series-4: #c98500;
+  --series-5: #d55181;
+  --series-6: #008300;
+  --series-7: #9085e9;
+  --series-other: #7a6a58;
   color-scheme: dark;
 }
 
@@ -48,5 +57,14 @@
   --font-display: 'Gowun Dodum', 'Noto Sans KR', sans-serif; /* 결정 0010 */
   --display-weight: 400; /* 고운 돋움은 굵기가 400 하나 */
   --book-shadow: 0 18px 30px -10px rgba(29, 36, 51, 0.35);
+  /* 연도 비교 계열 색 (dataviz 기본 팔레트 밝은 단계, 카드 바탕 #ffffff에서 검증, 결정 0013) */
+  --series-1: #2a78d6;
+  --series-2: #eb6834;
+  --series-3: #1baf7a;
+  --series-4: #eda100;
+  --series-5: #e87ba4;
+  --series-6: #008300;
+  --series-7: #6250d6;
+  --series-other: #a7a29a;
   color-scheme: light;
 }
