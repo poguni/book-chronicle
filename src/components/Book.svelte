@@ -19,6 +19,7 @@
       | 'height'
       | 'palette'
       | 'pattern'
+      | 'status'
       | 'finishedAt'
       | 'isBookOfYear'
     >;
@@ -39,6 +40,7 @@
       author: spine.author,
       pages: spine.pages,
       estimated: spine.estimated,
+      status: spine.status,
       finished: spine.finishedAt ? ko.book.finishedMonth(spine.finishedAt) : null,
       bookOfYear: spine.isBookOfYear,
     }),

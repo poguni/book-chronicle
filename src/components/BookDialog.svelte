@@ -11,7 +11,6 @@
   import {
     emptyForm,
     formFromRows,
-    RATING_OPTIONS,
     validateForm,
     type BookFormErrors,
     type BookFormValues,
@@ -19,9 +18,10 @@
   import { ko } from '../lib/i18n/ko';
   import { library } from '../lib/library.svelte';
   import { DEFAULT_PAGES, spineHeight } from '../lib/spine/geometry';
-  import { patternFor, SUGGESTED_CATEGORIES, type Pattern } from '../lib/spine/patterns';
+  import { CATEGORIES, patternFor, type Pattern } from '../lib/spine/patterns';
   import Book from './Book.svelte';
   import Icon from './Icon.svelte';
+  import StarRating from './StarRating.svelte';
 
   // 책 꽂기·고치기 대화 상자 (DESIGN 11장). 알라딘 검색은 Phase 5에서 왼쪽에 붙입니다.
   let {
@@ -58,6 +58,15 @@
   let saving = $state(false);
   let paletteTouched = $state(false);
   let confirmingDelete = $state(false);
+
+  // 분야: 목록에서 고르거나, 맨 위 "직접 입력"을 골라 적습니다(결정 0006).
+  const CUSTOM = '__custom__';
+  const isListed = (c: string) => (CATEGORIES as readonly string[]).includes(c);
+  let categoryChoice = $state(isListed(start.values.category) ? start.values.category : CUSTOM);
+  function chooseCategory(e: Event) {
+    categoryChoice = (e.currentTarget as HTMLSelectElement).value;
+    values.category = categoryChoice === CUSTOM ? '' : categoryChoice;
+  }
   let dialog: HTMLDialogElement;
 
   const heading = $derived(
@@ -95,6 +104,7 @@
       height: spineHeight(start.bookId),
       palette: values.palette,
       pattern: patternFor(values.pattern, values.category.trim() || null, library.patternMap),
+      status: 'finished' as const,
       finishedAt: null,
       isBookOfYear: false,
     };
@@ -187,17 +197,20 @@
             <span class="hint" id="hint-pages">{ko.form.pagesHint}</span>
             {#if errors.pages}<span class="err" id="err-pages">{errors.pages}</span>{/if}
           </div>
-          <label class="field">
-            <span>{ko.form.category}</span>
-            <input
-              bind:value={values.category}
-              list="category-options"
-              placeholder={ko.form.categoryPlaceholder}
-            />
-            <datalist id="category-options">
-              {#each SUGGESTED_CATEGORIES as c (c)}<option value={c}></option>{/each}
-            </datalist>
-          </label>
+          <div class="field">
+            <label for="f-category">{ko.form.category}</label>
+            <select id="f-category" value={categoryChoice} onchange={chooseCategory}>
+              <option value={CUSTOM}>{ko.form.categoryCustom}</option>
+              {#each CATEGORIES as c (c)}<option value={c}>{c}</option>{/each}
+            </select>
+            {#if categoryChoice === CUSTOM}
+              <input
+                bind:value={values.category}
+                aria-label={ko.form.categoryCustomLabel}
+                placeholder={ko.form.categoryPlaceholder}
+              />
+            {/if}
+          </div>
         </div>
       </fieldset>
 
@@ -238,12 +251,12 @@
                   <span>{ko.form.accent}</span>
                 </label>
               </div>
-              <label class="field">
-                <span>{ko.form.pattern}</span>
-                <select bind:value={values.pattern}>
+              <div class="field">
+                <label for="f-pattern">{ko.form.pattern}</label>
+                <select id="f-pattern" bind:value={values.pattern}>
                   {#each patterns as p (p.label)}<option value={p.value}>{p.label}</option>{/each}
                 </select>
-              </label>
+              </div>
             </div>
           </div>
         </fieldset>
@@ -251,14 +264,14 @@
         <fieldset>
           <legend class="label">{ko.form.readingSection}</legend>
           <div class="two">
-            <label class="field">
-              <span>{ko.form.status}</span>
-              <select bind:value={values.status}>
+            <div class="field">
+              <label for="f-status">{ko.form.status}</label>
+              <select id="f-status" bind:value={values.status}>
                 <option value="finished">{ko.form.statusFinished}</option>
                 <option value="reading">{ko.form.statusReading}</option>
                 <option value="dropped">{ko.form.statusDropped}</option>
               </select>
-            </label>
+            </div>
             {#if values.status === 'finished'}
               <div class="field">
                 <label for="f-date">{ko.form.finishedAt}</label>
@@ -278,17 +291,15 @@
             {/if}
           </div>
           <div class="field">
-            <label for="f-rating">{ko.form.rating}</label>
-            <select
-              id="f-rating"
-              bind:value={values.rating}
-              aria-describedby={errors.rating ? 'err-rating' : undefined}
-            >
-              <option value="">{ko.form.ratingNone}</option>
-              {#each RATING_OPTIONS as r (r)}
-                <option value={String(r)}>{ko.form.ratingValue(r)}</option>
-              {/each}
-            </select>
+            <span class="field-label" id="f-rating-label">{ko.form.rating}</span>
+            <StarRating
+              bind:value={
+                () => (values.rating === '' ? null : Number(values.rating)),
+                (v) => (values.rating = v === null ? '' : String(v))
+              }
+              labelledby="f-rating-label"
+              describedby={errors.rating ? 'err-rating' : undefined}
+            />
             {#if errors.rating}<span class="err" id="err-rating">{errors.rating}</span>{/if}
           </div>
           <label class="field">
@@ -411,6 +422,9 @@
   }
   .field b {
     color: var(--accent);
+  }
+  .field select + input {
+    margin-top: 6px;
   }
   .field input,
   .field select,

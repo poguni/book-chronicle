@@ -50,8 +50,9 @@
       <button type="button" class="btn-primary" onclick={onretry}>{ko.shelf.retry}</button>
     </EmptyState>
   {:else}
-    {#each shelves as shelf (shelf.year ?? 'unknown')}
+    {#each shelves as shelf (`${shelf.kind}-${shelf.year}`)}
       <Shelf
+        kind={shelf.kind}
         year={shelf.year}
         count={shelf.count}
         pages={shelf.pages}

@@ -55,6 +55,11 @@ export const ko = {
     meta: (count: number, pages: string) => `${count}권 · ${pages}쪽`,
     empty: '이 해의 첫 책을 꽂아 볼까요?',
     unknownYear: '연도 미상',
+    reading: '읽는 중',
+    readingHint: '다 읽으면 상태를 완독으로 바꿔 주세요. 그해 책장으로 옮겨 가요.',
+    readingMeta: (count: number) => `${count}권`,
+    dropped: '중단한 책',
+    droppedHint: '다시 펼치면 상태를 읽는 중으로 바꿔 주세요.',
     unknownYearHint: '완독일을 넣으면 그해 책장으로 옮겨 가요.',
     bookOfYear: (title: string) => `그해의 책 · ${title}`,
     loadError: '책장을 불러오지 못했어요. 연결을 확인한 뒤 다시 시도해 주세요.',
@@ -67,6 +72,7 @@ export const ko = {
       author: string | null;
       pages: number;
       estimated: boolean;
+      status: 'finished' | 'reading' | 'dropped';
       finished: string | null;
       bookOfYear: boolean;
     }) =>
@@ -74,7 +80,13 @@ export const ko = {
         p.title,
         p.author,
         p.estimated ? `쪽수 모름(약 ${p.pages}쪽으로 표시)` : `${p.pages}쪽`,
-        p.finished ? `${p.finished} 완독` : '완독일 모름',
+        p.status === 'reading'
+          ? '읽는 중'
+          : p.status === 'dropped'
+            ? '중단함'
+            : p.finished
+              ? `${p.finished} 완독`
+              : '완독일 모름',
         p.bookOfYear ? '그해의 책' : null,
       ]
         .filter(Boolean)
@@ -95,7 +107,9 @@ export const ko = {
     pages: '쪽수',
     pagesHint: '모르면 비워 두세요. 분야 평균으로 그려요.',
     category: '분야',
-    categoryPlaceholder: '예: 소설/시/희곡',
+    categoryCustom: '직접 입력',
+    categoryCustomLabel: '분야 직접 입력',
+    categoryPlaceholder: '예: 소설',
     status: '상태',
     statusFinished: '완독',
     statusReading: '읽는 중',
@@ -105,6 +119,7 @@ export const ko = {
     rating: '별점',
     ratingNone: '별점 없음',
     ratingValue: (n: number) => `${n}점`,
+    ratingClear: '별점 지우기',
     note: '한 줄 메모',
     notePlaceholder: '이 책을 덮으며 떠오른 문장',
     base: '바탕색',

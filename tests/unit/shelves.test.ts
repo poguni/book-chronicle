@@ -118,7 +118,7 @@ describe('buildShelves', () => {
     expect(shelves.find((s) => s.year === 2025)?.count).toBe(1);
   });
 
-  it('읽는 중·중단은 꽂지 않고, 완독일 없는 완독은 맨 아래 연도 미상', () => {
+  it('읽는 중은 맨 위, 중단한 책은 맨 아래, 완독일 없는 완독은 그 사이 연도 미상', () => {
     const shelves = buildShelves(
       [book('a'), book('b'), book('c'), book('d')],
       [
@@ -131,9 +131,30 @@ describe('buildShelves', () => {
       {},
       2026,
     );
-    expect(shelves.map((s) => s.year)).toEqual([2026, 2023, null]);
-    expect(shelves.at(-1)?.spines.map((s) => s.bookId)).toEqual(['c']);
-    expect(shelves[0]?.count).toBe(0);
+    expect(shelves.map((s) => [s.kind, s.year])).toEqual([
+      ['reading', null],
+      ['year', 2026],
+      ['year', 2023],
+      ['unknown', null],
+      ['dropped', null],
+    ]);
+    expect(shelves[0]?.spines.map((s) => [s.bookId, s.status])).toEqual([['a', 'reading']]);
+    expect(shelves.at(-1)?.spines.map((s) => s.bookId)).toEqual(['b']);
+    // 중단한 기록은 완독일이 있어도 올해 책장·통계에 들어가지 않는다
+    expect(shelves[1]?.count).toBe(0);
+    expect(yearSummary(shelves, 2026).books).toBe(0);
+    expect(yearBands(shelves).map((b) => b.year)).toEqual([2026, 2023]);
+  });
+
+  it('읽는 중·중단한 책이 없으면 그 선반도 없다', () => {
+    const shelves = buildShelves(
+      [book('a')],
+      [reading('r1', 'a', '2026-01-01')],
+      noYears,
+      {},
+      2026,
+    );
+    expect(shelves.map((s) => s.kind)).toEqual(['year']);
   });
 
   it('그해의 책에 표시하고 제목을 머리글에 쓴다', () => {

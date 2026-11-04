@@ -3,13 +3,14 @@
   import type { Attachment } from 'svelte/attachments';
   import { formatNumber } from '../lib/format';
   import { ko } from '../lib/i18n/ko';
-  import type { ShelfSpine } from '../lib/shelves';
+  import type { ShelfKind, ShelfSpine } from '../lib/shelves';
   import { packRows, spineWidthPx, TITLE_MIN_PX } from '../lib/spine/geometry';
   import Book from './Book.svelte';
 
   // 한 연도 = 머리글 + 책장 + 선반 판 (DESIGN 6.1).
   // 선반 폭을 넘으면 다음 줄로 넘기고 줄마다 선반 판을 그립니다(결정 0001-4).
   let {
+    kind = 'year',
     year,
     count,
     pages,
@@ -18,6 +19,7 @@
     onpick,
     empty,
   }: {
+    kind?: ShelfKind;
     year: number | null;
     count: number;
     pages: number;
@@ -28,8 +30,27 @@
     empty?: Snippet;
   } = $props();
 
-  const id = $derived(year === null ? 'y-unknown' : `y${year}`);
-  const title = $derived(year === null ? ko.shelf.unknownYear : String(year));
+  const id = $derived(
+    kind === 'year' ? `y${year}` : kind === 'unknown' ? 'y-unknown' : `shelf-${kind}`,
+  );
+  const title = $derived(
+    kind === 'year'
+      ? String(year)
+      : kind === 'unknown'
+        ? ko.shelf.unknownYear
+        : kind === 'reading'
+          ? ko.shelf.reading
+          : ko.shelf.dropped,
+  );
+  const hint = $derived(
+    kind === 'unknown'
+      ? ko.shelf.unknownYearHint
+      : kind === 'reading'
+        ? ko.shelf.readingHint
+        : kind === 'dropped'
+          ? ko.shelf.droppedHint
+          : null,
+  );
 
   // 책장 안쪽 폭(px). cqw와 같은 기준(책장 내용 상자)으로 재서 줄 나눔·제목 숨김을 계산합니다.
   let width = $state(0);
@@ -58,11 +79,15 @@
   }
 </script>
 
-<section class="shelf-wrap" {id} aria-labelledby="{id}-title">
+<section class="shelf-wrap {kind}" {id} aria-labelledby="{id}-title">
   <div class="shelf-head">
     <h2 class="display" id="{id}-title">{title}</h2>
-    <span class="meta">{ko.shelf.meta(count, formatNumber(pages))}</span>
-    {#if year === null}<span class="meta">{ko.shelf.unknownYearHint}</span>{/if}
+    <span class="meta">
+      {kind === 'reading' || kind === 'dropped'
+        ? ko.shelf.readingMeta(count)
+        : ko.shelf.meta(count, formatNumber(pages))}
+    </span>
+    {#if hint}<span class="meta">{hint}</span>{/if}
     {#if bookOfYearTitle}
       <span class="boy">
         <svg width="11" height="14" viewBox="0 0 12 14" fill="currentColor" aria-hidden="true">
@@ -174,6 +199,10 @@
   :global([data-theme='paper']) .shelf {
     padding-left: 8px;
     padding-right: 8px;
+  }
+  /* 중단한 책은 조금 물러나 보이게 */
+  .shelf-wrap.dropped .shelf :global(.book) {
+    opacity: 0.7;
   }
   @media (max-width: 899px) {
     .shelf-wrap {

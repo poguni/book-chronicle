@@ -8,29 +8,41 @@ import {
   spineHeight,
   spineWidthPx,
 } from '../../src/lib/spine/geometry';
-import { parsePatternMap, patternFor } from '../../src/lib/spine/patterns';
+import {
+  CATEGORIES,
+  DEFAULT_PATTERN_MAP,
+  parsePatternMap,
+  patternFor,
+} from '../../src/lib/spine/patterns';
 import { parseSpineData, presetPalette, PRESET_PALETTES } from '../../src/lib/spine/spineData';
 
 describe('patternFor', () => {
   it('분야별 기본 패턴', () => {
-    expect(patternFor(null, '역사')).toBe('hardcover');
-    expect(patternFor(null, '경제경영')).toBe('hardcover');
-    expect(patternFor(null, '소설/시/희곡')).toBe('paperback');
-    expect(patternFor(null, '에세이')).toBe('label');
+    expect(patternFor(null, '통계학')).toBe('hardcover');
+    expect(patternFor(null, '논문')).toBe('hardcover');
+    expect(patternFor(null, '파이썬')).toBe('paperback');
+    expect(patternFor(null, '만화')).toBe('paperback');
+    expect(patternFor(null, '일본어')).toBe('label');
+    expect(patternFor(null, '사진 & 카메라')).toBe('label');
   });
 
-  it('매핑에 없는 분야와 분야 없음은 라벨형', () => {
-    expect(patternFor(null, '요리/살림')).toBe('label');
+  it('24개 분야 모두 기본 패턴이 있다', () => {
+    expect(CATEGORIES).toHaveLength(24);
+    for (const c of CATEGORIES) expect(DEFAULT_PATTERN_MAP[c], c).toBeDefined();
+  });
+
+  it('목록에 없는 분야(직접 입력)와 분야 없음은 라벨형', () => {
+    expect(patternFor(null, '소설')).toBe('label');
     expect(patternFor(null, null)).toBe('label');
   });
 
   it('외서 표시는 떼고 찾는다', () => {
-    expect(patternFor(null, '외서 소설/시/희곡')).toBe('paperback');
+    expect(patternFor(null, '외서 수학')).toBe('hardcover');
   });
 
   it('책마다 지정한 패턴 > 사용자 매핑 > 기본 매핑', () => {
-    expect(patternFor(null, '역사', { 역사: 'label' })).toBe('label');
-    expect(patternFor('paperback', '역사', { 역사: 'label' })).toBe('paperback');
+    expect(patternFor(null, '수학', { 수학: 'label' })).toBe('label');
+    expect(patternFor('paperback', '수학', { 수학: 'label' })).toBe('paperback');
   });
 
   it('settings.pattern_map에서 이상한 값은 버린다', () => {

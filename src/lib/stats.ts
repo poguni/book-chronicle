@@ -10,7 +10,7 @@ export type YearSummary = {
 };
 
 export function shelfOf(shelves: readonly ShelfYear[], year: number): ShelfYear | undefined {
-  return shelves.find((s) => s.year === year);
+  return shelves.find((s) => s.kind === 'year' && s.year === year);
 }
 
 /** 별점이 있는 기록만의 평균(별점 없음 null은 0과 다름, 결정 0001-13). 소수 첫째 자리 */

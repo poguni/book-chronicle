@@ -1,5 +1,6 @@
 // 완독 기록을 연도별 책장으로 묶는 순수 함수 (PRD F4, 결정 0001-5·6·7)
 import type { Database } from './database.types';
+import type { ReadingStatus } from './bookForm';
 import { hueKey } from './spine/color';
 import { categoryAveragePages, effectivePages, spineHeight } from './spine/geometry';
 import { patternFor, type Pattern } from './spine/patterns';
@@ -25,14 +26,19 @@ export type ShelfSpine = {
   height: number;
   palette: Palette;
   pattern: Pattern;
+  status: ReadingStatus;
   finishedAt: string | null;
   rating: number | null;
   createdAt: string;
   isBookOfYear: boolean;
 };
 
+/** year: 연도 책장 / unknown: 완독일 없는 완독(연도 미상) / reading: 읽는 중 / dropped: 중단한 책 */
+export type ShelfKind = 'year' | 'unknown' | 'reading' | 'dropped';
+
 export type ShelfYear = {
-  /** 연도. 완독일이 없는 기록을 모은 칸은 null(연도 미상) */
+  kind: ShelfKind;
+  /** 연도. 연도 책장이 아니면 null */
   year: number | null;
   spines: ShelfSpine[];
   count: number;
@@ -66,8 +72,9 @@ export function sortSpines(spines: readonly ShelfSpine[], key: SortKey): ShelfSp
 }
 
 /**
- * 연도별 책장. 최신 연도가 위, 올해는 비어 있어도 늘 있고, 지난 빈 해는 빼며,
- * "연도 미상"(완독했지만 완독일 없음)은 맨 아래. 읽는 중·중단 기록은 꽂지 않습니다.
+ * 책장 목록. 맨 위에 "읽는 중"(있을 때만), 이어서 연도 책장(최신 연도가 위, 올해는 비어 있어도 늘 있고,
+ * 지난 빈 해는 뺌), "연도 미상"(완독했지만 완독일 없음), 맨 아래 "중단한 책"(있을 때만).
+ * 읽는 중·중단 기록은 연도 책장과 통계에 넣지 않습니다(결정 0006).
  */
 export function buildShelves(
   books: readonly BookRow[],
@@ -81,14 +88,16 @@ export function buildShelves(
   const bookOfYear = new Map(years.map((y) => [y.year, y.book_of_year[0] ?? null]));
 
   const groups = new Map<number | null, ShelfSpine[]>([[currentYear, []]]);
+  const reading: ShelfSpine[] = [];
+  const dropped: ShelfSpine[] = [];
   for (const r of readings) {
-    if (r.status !== 'finished') continue;
+    const status: ReadingStatus =
+      r.status === 'reading' || r.status === 'dropped' ? r.status : 'finished';
     const book = bookById.get(r.book_id);
     if (!book) continue;
     const spine = parseSpineData(book.spine, book.id);
     const { pages, estimated } = effectivePages(book, averages);
-    const list = groups.get(r.year) ?? [];
-    list.push({
+    const spineItem: ShelfSpine = {
       readingId: r.id,
       bookId: book.id,
       title: book.title,
@@ -100,12 +109,15 @@ export function buildShelves(
       height: spineHeight(book.id),
       palette: spine.palette,
       pattern: patternFor(spine.pattern, book.category, patternMap),
-      finishedAt: r.finished_at,
+      status,
+      finishedAt: status === 'finished' ? r.finished_at : null,
       rating: r.rating === null ? null : Number(r.rating),
       createdAt: r.created_at,
-      isBookOfYear: r.year !== null && bookOfYear.get(r.year) === book.id,
-    });
-    groups.set(r.year, list);
+      isBookOfYear: status === 'finished' && r.year !== null && bookOfYear.get(r.year) === book.id,
+    };
+    if (status === 'reading') reading.push(spineItem);
+    else if (status === 'dropped') dropped.push(spineItem);
+    else groups.set(r.year, [...(groups.get(r.year) ?? []), spineItem]);
   }
 
   const order = [...groups.keys()].sort((a, b) => {
@@ -114,15 +126,22 @@ export function buildShelves(
     return b - a;
   });
 
-  return order.map((year) => {
-    const spines = sortSpines(groups.get(year) ?? [], 'date');
+  const shelf = (kind: ShelfKind, year: number | null, list: ShelfSpine[]): ShelfYear => {
+    const spines = sortSpines(list, 'date');
     const boyId = year === null ? null : bookOfYear.get(year);
     return {
+      kind,
       year,
       spines,
       count: spines.length,
       pages: spines.reduce((sum, s) => sum + (s.knownPages ?? 0), 0),
       bookOfYearTitle: (boyId && bookById.get(boyId)?.title) || null,
     };
-  });
+  };
+
+  return [
+    ...(reading.length > 0 ? [shelf('reading', null, reading)] : []),
+    ...order.map((year) => shelf(year === null ? 'unknown' : 'year', year, groups.get(year) ?? [])),
+    ...(dropped.length > 0 ? [shelf('dropped', null, dropped)] : []),
+  ];
 }

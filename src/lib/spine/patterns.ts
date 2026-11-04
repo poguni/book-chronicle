@@ -4,36 +4,67 @@ import type { Json } from '../database.types';
 export type Pattern = 'hardcover' | 'paperback' | 'label';
 export const PATTERNS: readonly Pattern[] = ['hardcover', 'paperback', 'label'];
 
-/** 기본 매핑. 알라딘 2단계 분야 이름과 짧은 이름을 함께 둡니다. 여기 없는 분야는 라벨형(결정 0001-2). */
-export const DEFAULT_PATTERN_MAP: Readonly<Record<string, Pattern>> = {
-  인문학: 'hardcover',
-  인문: 'hardcover',
-  역사: 'hardcover',
-  과학: 'hardcover',
-  사회과학: 'hardcover',
-  사회: 'hardcover',
-  경제경영: 'hardcover',
-  '소설/시/희곡': 'paperback',
-  소설: 'paperback',
-  장르소설: 'paperback',
-  에세이: 'label',
-  '예술/대중문화': 'label',
-  예술: 'label',
-  자기계발: 'label',
-};
-
-/** 책 꽂기 대화 상자에서 고를 수 있게 보여 줄 분야 */
-export const SUGGESTED_CATEGORIES = [
-  '소설/시/희곡',
-  '에세이',
-  '인문학',
-  '역사',
+/**
+ * 앱 주인이 주로 읽는 분야 24개(2026-11-04 결정 0006). 책 꽂기 대화 상자의 분야 목록입니다.
+ * 이 목록에 없는 분야는 "직접 입력"으로 적습니다.
+ */
+export const CATEGORIES = [
+  '영어',
+  '일본어',
+  '언어',
+  '통계학',
+  '파이썬',
+  '바이브 코딩',
+  '데이터 분석',
+  '수학',
   '과학',
+  '생명과학',
+  '화학',
+  '여행',
+  '사진 & 카메라',
+  '교육평가',
+  '교육심리',
   '사회과학',
-  '경제경영',
-  '자기계발',
-  '예술/대중문화',
+  '인문',
+  '교양',
+  '취미',
+  '만화',
+  'IT & 컴퓨터',
+  '주식 & 경제',
+  '학술지',
+  '논문',
 ] as const;
+
+/**
+ * 분야별 기본 책등 무늬. 학술·이론서는 하드커버, 실용·기술서와 가벼운 읽을거리는 페이퍼백,
+ * 어학·여행·취미는 라벨형. 여기 없는 분야(직접 입력)는 라벨형(결정 0001-2).
+ */
+export const DEFAULT_PATTERN_MAP: Readonly<Record<string, Pattern>> = {
+  통계학: 'hardcover',
+  수학: 'hardcover',
+  과학: 'hardcover',
+  생명과학: 'hardcover',
+  화학: 'hardcover',
+  교육평가: 'hardcover',
+  교육심리: 'hardcover',
+  사회과학: 'hardcover',
+  인문: 'hardcover',
+  '주식 & 경제': 'hardcover',
+  학술지: 'hardcover',
+  논문: 'hardcover',
+  파이썬: 'paperback',
+  '바이브 코딩': 'paperback',
+  '데이터 분석': 'paperback',
+  'IT & 컴퓨터': 'paperback',
+  교양: 'paperback',
+  만화: 'paperback',
+  영어: 'label',
+  일본어: 'label',
+  언어: 'label',
+  여행: 'label',
+  '사진 & 카메라': 'label',
+  취미: 'label',
+};
 
 export function isPattern(value: unknown): value is Pattern {
   return value === 'hardcover' || value === 'paperback' || value === 'label';
