@@ -51,3 +51,33 @@ a {
     transition: none;
   }
 }
+
+/* 여러 화면에서 쓰는 공통 부품 (DESIGN 7.5) */
+.label {
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+}
+
+.btn-primary {
+  height: 48px;
+  padding: 0 18px;
+  border-radius: var(--radius-m);
+  border: 0;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+/* 시안에 아직 없는 화면의 제목 (placeholder 화면용) */
+.page-title {
+  margin: 0;
+  font-size: clamp(26px, 2.3vw, 34px);
+  line-height: 1.25;
+}

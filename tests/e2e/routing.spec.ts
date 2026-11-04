@@ -1,34 +1,11 @@
-import { expect, test, type Page } from '@playwright/test';
-
-// E2E는 진짜 Supabase 없이 돌립니다. playwright.config.ts가 가짜 주소(127.0.0.1:54399)로 빌드하고,
-// 여기서 그 주소로 가는 인증·DB 요청을 가짜 응답으로 바꿉니다.
-const AUTH_TOKEN = '**/auth/v1/token**';
-
-function fakeSession() {
-  const now = Math.floor(Date.now() / 1000);
-  return {
-    access_token: 'e2e-access-token',
-    token_type: 'bearer',
-    expires_in: 3600,
-    expires_at: now + 3600,
-    refresh_token: 'e2e-refresh-token',
-    user: {
-      id: '00000000-0000-4000-8000-000000000001',
-      aud: 'authenticated',
-      role: 'authenticated',
-      email: 'owner@example.com',
-      app_metadata: {},
-      user_metadata: {},
-      created_at: new Date().toISOString(),
-    },
-  };
-}
-
-async function fillLogin(page: Page) {
-  await page.getByLabel('이메일').fill('owner@example.com');
-  await page.getByLabel('비밀번호').fill('password-1234');
-  await page.getByRole('button', { name: '로그인' }).click();
-}
+import { expect, test } from '@playwright/test';
+import {
+  AUTH_TOKEN,
+  fakeSession,
+  fillLogin,
+  horizontalOverflow,
+  openMenuIfCollapsed,
+} from './helpers';
 
 test('로그인하지 않으면 어느 주소든 로그인 화면이 보이고 주소는 그대로다', async ({ page }) => {
   await page.goto('./#/compare');
@@ -76,11 +53,13 @@ test('로그인하면 보던 화면으로 돌아가고, settings 행을 만든�
   // bookchronicle 스키마로 요청하는지 확인
   expect(req.headers()['content-profile']).toBe('bookchronicle');
 
+  await openMenuIfCollapsed(page);
   await page.getByRole('link', { name: '연도 비교' }).click();
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('연도 비교');
 
   // 로그아웃하면 다시 로그인 화면
   await page.route('**/auth/v1/logout**', (route) => route.fulfill({ status: 204, body: '' }));
+  await openMenuIfCollapsed(page);
   await page.getByRole('button', { name: '로그아웃' }).click();
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('책장으로 돌아오신 걸 환영해요');
 });
@@ -88,8 +67,5 @@ test('로그인하면 보던 화면으로 돌아가고, settings 행을 만든�
 test('로그인 화면에서 가로 스크롤이 생기지 않는다', async ({ page }) => {
   await page.goto('./');
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
-  const overflow = await page.evaluate(
-    () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
-  );
-  expect(overflow).toBeLessThanOrEqual(0);
+  expect(await horizontalOverflow(page)).toBeLessThanOrEqual(0);
 });

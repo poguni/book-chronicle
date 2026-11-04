@@ -2,5 +2,5 @@
   import { ko } from '../lib/i18n/ko';
 </script>
 
-<h1>{ko.pages.settings}</h1>
+<h1 class="display page-title">{ko.pages.settings}</h1>
 <p>{ko.placeholder}</p>
