@@ -270,6 +270,7 @@
   }
   .row b {
     font-family: var(--font-display);
+    font-weight: var(--display-weight);
     font-size: 16px;
   }
   .row span {

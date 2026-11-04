@@ -265,6 +265,7 @@
   }
   .cover b {
     font-family: var(--font-display);
+    font-weight: var(--display-weight);
     font-size: 13px;
     line-height: 1.3;
   }
