@@ -1,5 +1,8 @@
 import type { BookFormData } from './bookForm';
-import { deleteBook, insertBook, listBooks, updateBook } from './data/books';
+import { covers } from './covers.svelte';
+import type { Json } from './database.types';
+import { COVER_BUCKET, deleteBook, insertBook, listBooks, updateBook } from './data/books';
+import { uploadCover } from './data/covers';
 import { deleteReading, insertReading, listReadings, updateReading } from './data/readings';
 import { getSettings } from './data/settings';
 import { listYears } from './data/years';
@@ -13,6 +16,18 @@ import {
 import { parsePatternMap, type Pattern } from './spine/patterns';
 import { parseSpineData, toJson } from './spine/spineData';
 import { status } from './status.svelte';
+import { supabase } from './supabase';
+
+/** 도서 검색에서 고른 책일 때 함께 저장하는 값 (사용자가 직접 고치지 않는 값) */
+export type BookExtras = {
+  isbn13: string | null;
+  pubDate: string | null;
+  categoryRaw: string | null;
+  size: Json | null;
+  candidates: string[];
+  /** 가로 300px 이하로 줄인 표지 JPEG */
+  coverJpeg: Blob | null;
+};
 
 // 내 책장 데이터. 컴포넌트는 supabase를 직접 부르지 않고 이 저장소와 src/lib/data/를 거칩니다.
 export type LoadState = 'idle' | 'loading' | 'ready' | 'error';
@@ -106,25 +121,54 @@ class Library {
     return true;
   }
 
-  /** 새 책 + 첫 독서 기록. 책 ID는 미리 만들어 기본 색 세트를 고르는 데 씁니다. */
-  addBook(bookId: string, data: BookFormData, paletteTouched: boolean): Promise<boolean> {
+  bookByIsbn(isbn13: string): BookRow | undefined {
+    return this.books.find((b) => b.isbn13 === isbn13);
+  }
+
+  /**
+   * 새 책 + 첫 독서 기록. 책 ID는 미리 만들어 기본 색 세트를 고르는 데 씁니다.
+   * 검색에서 고른 책이면 표지를 먼저 올리고 책에 경로를 적습니다.
+   */
+  addBook(
+    bookId: string,
+    data: BookFormData,
+    paletteTouched: boolean,
+    extras: BookExtras | null = null,
+  ): Promise<boolean> {
     return this.#save(async () => {
-      await insertBook({
-        id: bookId,
-        ...bookFields(data),
-        source: 'manual',
-        spine: toJson({
-          palette: data.palette,
-          candidates: [],
-          pattern: data.pattern,
-          manual: paletteTouched,
-        }),
-      });
+      const coverPath = extras?.coverJpeg ? await uploadCover(bookId, extras.coverJpeg) : null;
+      try {
+        await insertBook({
+          id: bookId,
+          ...bookFields(data),
+          source: extras ? 'kakao' : 'manual',
+          isbn13: extras?.isbn13 ?? null,
+          pub_date: extras?.pubDate ?? null,
+          category_raw: extras?.categoryRaw ?? null,
+          size: extras?.size ?? null,
+          cover_path: coverPath,
+          spine: toJson({
+            palette: data.palette,
+            candidates: extras?.candidates ?? [],
+            pattern: data.pattern,
+            manual: paletteTouched,
+          }),
+        });
+      } catch (e) {
+        // 책을 못 넣었으면 방금 올린 표지도 지웁니다.
+        if (coverPath)
+          await supabase.storage
+            .from(COVER_BUCKET)
+            .remove([coverPath])
+            .catch(() => {});
+        throw e;
+      }
+      if (coverPath && extras?.coverJpeg) covers.remember(coverPath, extras.coverJpeg);
       try {
         await insertReading({ book_id: bookId, ...readingFields(data) });
       } catch (e) {
         // 기록 없이 책만 남지 않게 되돌립니다.
-        await deleteBook({ id: bookId, cover_path: null, texture_path: null }).catch(() => {});
+        await deleteBook({ id: bookId, cover_path: coverPath, texture_path: null }).catch(() => {});
         throw e;
       }
     });

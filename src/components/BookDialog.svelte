@@ -3,11 +3,17 @@
   export type DialogMode =
     | { kind: 'new' }
     | { kind: 'edit'; bookId: string; readingId: string }
-    | { kind: 'reread'; bookId: string };
+    | { kind: 'reread'; bookId: string; duplicate?: boolean };
 </script>
 
 <script lang="ts">
   import { untrack } from 'svelte';
+  import { fetchCover, lookupBook, type BookInfo } from '../lib/bookApi';
+  import { cleanAuthor, cleanTitle, mapCategory } from '../lib/bookMap';
+  import { processCover } from '../lib/coverPalette';
+  import { covers } from '../lib/covers.svelte';
+  import { shelfOf } from '../lib/stats';
+  import { parseSpineData, type Palette } from '../lib/spine/spineData';
   import {
     emptyForm,
     formFromRows,
@@ -16,14 +22,15 @@
     type BookFormValues,
   } from '../lib/bookForm';
   import { ko } from '../lib/i18n/ko';
-  import { library } from '../lib/library.svelte';
+  import { library, type BookExtras } from '../lib/library.svelte';
   import { DEFAULT_PAGES, spineHeight } from '../lib/spine/geometry';
   import { CATEGORIES, patternFor, type Pattern } from '../lib/spine/patterns';
   import Book from './Book.svelte';
+  import BookSearch from './BookSearch.svelte';
   import Icon from './Icon.svelte';
   import StarRating from './StarRating.svelte';
 
-  // 책 꽂기·고치기 대화 상자 (DESIGN 11장). 알라딘 검색은 Phase 5에서 왼쪽에 붙입니다.
+  // 책 꽂기·고치기 대화 상자 (DESIGN 11장). 새 책은 위쪽 도서 검색으로 채우거나 직접 입력합니다.
   let {
     mode,
     onclose,
@@ -68,6 +75,89 @@
     values.category = categoryChoice === CUSTOM ? '' : categoryChoice;
   }
   let dialog: HTMLDialogElement;
+
+  // ── 검색에서 고른 책 (결정 0007·0008)
+  let extras = $state<BookExtras | null>(null);
+  let picking = $state(false);
+  let coverFailed = $state(false);
+  let pickedCoverUrl = $state<string | null>(null);
+  const existingBook = untrack(() =>
+    mode.kind === 'new' ? undefined : library.bookById(mode.bookId),
+  );
+  const coverUrl = $derived(pickedCoverUrl ?? covers.url(existingBook?.cover_path ?? null));
+  const candidates = $derived(
+    extras?.candidates ??
+      (existingBook ? parseSpineData(existingBook.spine, existingBook.id).candidates : []),
+  );
+
+  $effect(() => () => {
+    if (pickedCoverUrl) URL.revokeObjectURL(pickedCoverUrl);
+  });
+
+  async function pick(book: BookInfo) {
+    // 이미 책장에 있는 책이면 새 책 대신 다시 읽은 기록으로 (ISBN은 사용자마다 하나)
+    const existing = book.isbn13 ? library.bookByIsbn(book.isbn13) : undefined;
+    if (existing) {
+      onchangemode({ kind: 'reread', bookId: existing.id, duplicate: true });
+      return;
+    }
+    picking = true;
+    coverFailed = false;
+    let full = book;
+    // 검색 결과(카카오)에는 쪽수·분류가 없어 ISBN으로 한 번 더 조회합니다(국립중앙도서관).
+    if (book.isbn13 && book.pages === null) {
+      full = (await lookupBook(book.isbn13).catch(() => null)) ?? book;
+    }
+    values.title = cleanTitle(full.title);
+    values.author = cleanAuthor(full.author) ?? '';
+    values.publisher = full.publisher ?? '';
+    values.pages = full.pages ? String(full.pages) : '';
+    values.category = mapCategory(full.title, full.kdc) ?? '';
+    categoryChoice = isListed(values.category) ? values.category : CUSTOM;
+    extras = {
+      isbn13: full.isbn13,
+      pubDate: full.pubDate,
+      categoryRaw: full.kdc ? `KDC ${full.kdc}` : null,
+      size: null,
+      candidates: [],
+      coverJpeg: null,
+    };
+    if (full.cover) {
+      try {
+        const { result, jpeg } = await processCover(await fetchCover(full.cover));
+        extras.coverJpeg = jpeg;
+        extras.candidates = result?.candidates ?? [];
+        if (result && !paletteTouched) values.palette = result.palette;
+        if (pickedCoverUrl) URL.revokeObjectURL(pickedCoverUrl);
+        pickedCoverUrl = URL.createObjectURL(jpeg);
+      } catch (e) {
+        console.warn('표지를 가져오지 못했어요', e);
+        coverFailed = true;
+      }
+    }
+    picking = false;
+  }
+
+  // ── 책등 색: 세 칸 중 하나를 고르고, 표지에서 뽑은 후보나 직접 고른 색을 넣습니다.
+  type Slot = keyof Palette;
+  let slot = $state<Slot>('base');
+  const slots: { key: Slot; label: string }[] = [
+    { key: 'base', label: ko.form.base },
+    { key: 'band', label: ko.form.band },
+    { key: 'accent', label: ko.form.accent },
+  ];
+  const slotLabel = $derived(slots.find((x) => x.key === slot)?.label ?? '');
+  function setColor(hex: string) {
+    values.palette[slot] = hex;
+    paletteTouched = true;
+  }
+
+  // 미리 보기의 양옆 책: 올해 책장 끝의 두 권(없으면 비움)
+  const neighbors = $derived(
+    (shelfOf(library.shelves, library.currentYear)?.spines ?? [])
+      .filter((s) => s.bookId !== start.bookId)
+      .slice(-2),
+  );
 
   const heading = $derived(
     mode.kind === 'new'
@@ -127,7 +217,7 @@
     saveError = false;
     const ok =
       mode.kind === 'new'
-        ? await library.addBook(start.bookId, result.data, paletteTouched)
+        ? await library.addBook(start.bookId, result.data, paletteTouched, extras)
         : await library.saveEntry(start.bookId, start.readingId, result.data, paletteTouched);
     saving = false;
     if (ok) dialog.close();
@@ -159,6 +249,14 @@
       </button>
     </header>
 
+    {#if mode.kind === 'new'}
+      <BookSearch onpick={pick} autofocus />
+      {#if picking}<p class="note" role="status">{ko.search.picking}</p>{/if}
+      {#if coverFailed}<p class="note" role="status">{ko.search.coverFailed}</p>{/if}
+    {:else if mode.kind === 'reread' && mode.duplicate}
+      <p class="note" role="status">{ko.search.duplicate}</p>
+    {/if}
+
     <div class="body">
       <fieldset>
         <legend class="label">{ko.form.bookSection}</legend>
@@ -170,7 +268,7 @@
             bind:value={values.title}
             required
             maxlength="500"
-            autofocus
+            autofocus={mode.kind !== 'new'}
             aria-invalid={errors.title ? 'true' : undefined}
             aria-describedby={errors.title ? 'err-title' : undefined}
           />
@@ -220,35 +318,51 @@
           <div class="spine-edit">
             <div class="preview" inert aria-hidden="true">
               <div class="preview-shelf">
+                {#each neighbors.slice(0, 1) as n (n.readingId)}
+                  <Book spine={n} showTitle={false} tabindex={-1} />
+                {/each}
                 <Book spine={preview} showTitle={true} tabindex={-1} />
+                {#each neighbors.slice(1) as n (n.readingId)}
+                  <Book spine={n} showTitle={false} tabindex={-1} />
+                {/each}
               </div>
               <div class="preview-plank"></div>
             </div>
             <div class="spine-fields">
-              <div class="colors">
-                <label class="color">
+              {#if coverUrl}
+                <img class="cover-thumb" src={coverUrl} alt={ko.form.coverAlt(values.title)} />
+              {/if}
+              <div class="colors" role="radiogroup" aria-label={ko.form.colorSlot}>
+                {#each slots as s (s.key)}
+                  <button
+                    type="button"
+                    class="slot"
+                    role="radio"
+                    aria-checked={slot === s.key}
+                    onclick={() => (slot = s.key)}
+                  >
+                    <span class="swatch" style:background={values.palette[s.key]}></span>
+                    <span>{s.label}</span>
+                  </button>
+                {/each}
+              </div>
+              <div class="cands" role="group" aria-label={ko.form.candidates}>
+                {#each candidates as c (c)}
+                  <button
+                    type="button"
+                    class="cand"
+                    style:background={c}
+                    aria-label={ko.form.useColor(slotLabel, c)}
+                    onclick={() => setColor(c)}
+                  ></button>
+                {/each}
+                <label class="cand custom" title={ko.form.customColor}>
+                  <span class="sr">{ko.form.customColor}</span>
                   <input
                     type="color"
-                    bind:value={values.palette.base}
-                    oninput={() => (paletteTouched = true)}
+                    value={values.palette[slot]}
+                    oninput={(e) => setColor(e.currentTarget.value.toUpperCase())}
                   />
-                  <span>{ko.form.base}</span>
-                </label>
-                <label class="color">
-                  <input
-                    type="color"
-                    bind:value={values.palette.band}
-                    oninput={() => (paletteTouched = true)}
-                  />
-                  <span>{ko.form.band}</span>
-                </label>
-                <label class="color">
-                  <input
-                    type="color"
-                    bind:value={values.palette.accent}
-                    oninput={() => (paletteTouched = true)}
-                  />
-                  <span>{ko.form.accent}</span>
                 </label>
               </div>
               <div class="field">
@@ -463,14 +577,14 @@
   .spine-edit {
     display: flex;
     gap: 16px;
-    align-items: stretch;
+    align-items: flex-start;
   }
   /* 760px 책장 위에 꽂힌 것과 같은 두께로 미리 보기 */
   .preview {
     --spine-k: 0.1444px;
     --spine-max: 68px;
     flex: none;
-    width: 96px;
+    width: 150px;
     display: flex;
     flex-direction: column;
   }
@@ -479,6 +593,7 @@
     display: flex;
     align-items: flex-end;
     justify-content: center;
+    gap: 2px;
     padding-top: 12px;
     min-height: calc(176 * var(--spine-hk) + 12px);
     background: var(--shelf-back);
@@ -499,25 +614,66 @@
   .colors {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 8px;
+    gap: 6px;
   }
-  .color {
+  .slot {
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 4px;
-    font-size: 12px;
+    padding: 6px 4px;
+    border-radius: 10px;
+    border: 1px solid transparent;
+    background: transparent;
     color: var(--muted);
+    font-size: 12px;
     cursor: pointer;
   }
-  .color input {
-    width: 44px;
-    height: 44px;
-    padding: 2px;
+  .slot[aria-checked='true'] {
+    border-color: var(--accent);
+    color: var(--text);
+    font-weight: 700;
+  }
+  .swatch {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
     border: 1px solid var(--line);
-    border-radius: 10px;
-    background: var(--card);
+  }
+  .cands {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .cand {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 1px solid var(--line);
     cursor: pointer;
+    padding: 0;
+    position: relative;
+    overflow: hidden;
+  }
+  .cand.custom {
+    background: conic-gradient(#e55, #ec5, #5c5, #5cd, #55e, #c5e, #e55);
+  }
+  .cand.custom input {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+  }
+  .cover-thumb {
+    width: 64px;
+    border-radius: 2px 4px 4px 2px;
+    box-shadow: var(--book-shadow);
+    align-self: flex-start;
+  }
+  .note {
+    margin: 0;
+    font-size: 13px;
+    color: var(--muted);
   }
   .save-error {
     margin: 0;

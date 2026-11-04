@@ -15,8 +15,9 @@ export default defineConfig(
       'design/',
       'playwright-report/',
       'test-results/',
-      // Edge Function은 Deno 환경이라 Phase 5에서 따로 검사합니다.
-      'supabase/',
+      // Edge Function의 Deno 연결부(index.ts)만 뺍니다. 핵심 로직(handler.ts)은 함께 검사합니다.
+      'supabase/.temp/',
+      'supabase/functions/**/index.ts',
     ],
   },
   js.configs.recommended,

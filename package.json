@@ -12,7 +12,8 @@
     "format": "prettier --write .",
     "test": "vitest run",
     "test:e2e": "playwright test",
-    "check:rls": "node scripts/check-rls.ts"
+    "check:rls": "node scripts/check-rls.ts",
+    "check:books": "node scripts/check-books.ts"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

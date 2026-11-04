@@ -7,10 +7,17 @@
     "types": ["svelte", "vite/client"],
     "strict": true,
     "allowArbitraryExtensions": true,
+    "allowImportingTsExtensions": true,
     "noEmit": true,
     "allowJs": true,
     "checkJs": true,
     "moduleDetection": "force"
   },
-  "include": ["src/**/*.ts", "src/**/*.js", "src/**/*.svelte", "tests/unit/**/*.ts"]
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.js",
+    "src/**/*.svelte",
+    "tests/unit/**/*.ts",
+    "supabase/functions/**/handler.ts"
+  ]
 }

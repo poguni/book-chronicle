@@ -5,7 +5,7 @@
 ## 1. 프로젝트 한눈에 보기
 - **무엇**: 해마다 읽은 책을 책등이 꽂힌 책장으로 보여 주는 개인용 독서 연대기 웹 앱
 - **누가**: 앱 주인 1명(로그인 필요, 이 앱에 회원 가입 화면 없음). 데스크톱 브라우저에서 기록하고 스마트폰으로 확인
-- **구성**: Svelte 5 + TypeScript + Vite(SPA) → GitHub Pages 배포 / Supabase(Auth·Postgres·Storage·Edge Functions) / 알라딘 Open API
+- **구성**: Svelte 5 + TypeScript + Vite(SPA) → GitHub Pages 배포 / Supabase(Auth·Postgres·Storage·Edge Functions) / 카카오 책 검색 + 국립중앙도서관 ISBN 서지정보(알라딘 Open API는 2026-10-30 종료, 결정 0008)
 - **오프라인 지원 없음**: 데이터 원본은 Supabase. IndexedDB·서비스 워커 캐시는 쓰지 않습니다.
 
 ## 2. 먼저 읽을 문서
@@ -31,8 +31,8 @@ npm run test                # Vitest 단위 테스트
 npm run test:e2e            # Playwright E2E 테스트
 ```
 ```bash
-supabase functions serve bookchronicle-aladin          # Edge Function 로컬 실행
-supabase functions deploy bookchronicle-aladin         # Edge Function 배포
+npx supabase functions deploy bookchronicle-books --use-api --no-verify-jwt   # Edge Function 배포 (사용자 확인 후)
+npm run check:books                                    # 배포 후 원격 점검
 npx supabase gen types typescript --remote --schema bookchronicle > src/lib/database.types.ts
 npx supabase db push --remote --dry-run                # 원격에 적용될 마이그레이션 목록만 확인
 npx supabase db push --remote                          # 마이그레이션을 원격 DB에 적용 (사용자 확인 후에만)
@@ -50,10 +50,10 @@ docs/        기획·문서 (PRD, 구현 계획, 결정 기록)
 design/      디자인 가이드와 시안
 src/pages/   화면 단위 (Login, Shelves, Compare, Recap, Import, Settings)
 src/components/  재사용 부품 (Sidebar, Shelf, Book, DetailPanel, ...)
-src/lib/     supabase.ts, auth.ts, theme.ts, data/, aladin.ts, spine/, stats.ts, csv.ts, backup.ts
+src/lib/     supabase.ts, auth.ts, theme.ts, data/, bookApi.ts, spine/, stats.ts, csv.ts, backup.ts
 src/styles/  tokens.css(공통 토큰), themes.css(서재·종이)
 supabase/migrations/  DB 스키마·RLS·Storage 정책 (SQL)
-supabase/functions/bookchronicle-aladin/  알라딘 프록시
+supabase/functions/bookchronicle-books/  도서 정보 프록시(카카오·국립중앙도서관)
 ```
 
 ## 5. 절대 규칙 (보안·공유 프로젝트)
@@ -62,7 +62,7 @@ supabase/functions/bookchronicle-aladin/  알라딘 프록시
 1. **`bookchronicle` 스키마만 다룹니다.** `public` 스키마와 기존 앱의 테이블·버킷·함수는 읽지도, 고치지도, 지우지도 않습니다.
 2. SQL에는 항상 스키마를 명시합니다(`bookchronicle.books`). 버킷은 `bookchronicle-covers`, 함수 이름은 `bookchronicle-`로 시작합니다.
 3. **모든 테이블과 버킷에 RLS를 켜고** "본인 행만(`user_id = (select auth.uid())`)" 정책을 마이그레이션에 함께 넣습니다. RLS 없는 테이블을 만들지 않습니다.
-4. 브라우저 코드에는 Supabase 주소와 공개 키(anon 또는 publishable 키)만 씁니다. **`service_role` 키와 알라딘 TTB 키는 저장소·브라우저 코드·로그에 절대 넣지 않습니다.** TTB 키는 `supabase secrets`에만 둡니다.
+4. 브라우저 코드에는 Supabase 주소와 공개 키(anon 또는 publishable 키)만 씁니다. **`service_role`(비밀) 키와 도서 API 키(카카오 REST 키, 국립중앙도서관 인증키)는 저장소·브라우저 코드·로그에 절대 넣지 않습니다.** 도서 API 키는 `supabase secrets`에만 둡니다.
 5. `.env`, `supabase/.env`, `.dev.vars` 같은 파일은 커밋하지 않습니다. 커밋 전에 `git diff --staged`에 비밀 값이 없는지 확인합니다.
 6. 아래 작업은 **반드시 사용자에게 먼저 확인**합니다.
    - `supabase db push` 등 원격 DB에 변경을 적용하는 명령
@@ -101,7 +101,7 @@ supabase/functions/bookchronicle-aladin/  알라딘 프록시
 - 한글 맞춤법과 띄어쓰기를 지킵니다. 숫자는 `toLocaleString('ko-KR')`로 표기(4,967쪽).
 - 오류 문구는 탓하지 않고 다음 행동을 알려 줍니다(예: "검색이 잠시 안 돼요. 직접 입력할 수 있어요").
 - 화면 문구는 한곳(`src/lib/i18n/ko.ts`)에 모읍니다.
-- 알라딘 데이터를 쓰는 화면에는 "도서 DB 제공: 알라딘 인터넷서점"을 표기합니다.
+- 도서 검색 데이터를 쓰는 화면에는 출처("도서 정보: 카카오 책 검색 · 국립중앙도서관")를 표기합니다.
 
 ## 8. 작업 방식
 1. `docs/IMPLEMENTATION_PLAN.md`에서 현재 Phase와 다음 체크 항목을 확인합니다.
@@ -121,7 +121,7 @@ supabase/functions/bookchronicle-aladin/  알라딘 프록시
 정해진 것(2026-11-04, Phase 0)
 - 로그인은 **이메일 + 비밀번호**. 소셜 로그인 없음
 - 기존 앱이 회원 가입을 쓰므로 **회원 가입은 막지 않음**. Auth 설정(Site URL·Redirect URLs)은 바꾸지 않음
-- Edge Function `bookchronicle-aladin`은 새로 만들고, JWT 검증 + 앱 주인 사용자 ID(`BOOKCHRONICLE_OWNER_ID`)만 허용
+- Edge Function `bookchronicle-books`(처음엔 `bookchronicle-aladin`)는 함수 안에서 로그인 확인 + 앱 주인 사용자 ID(`BOOKCHRONICLE_OWNER_ID`)만 허용 (`verify_jwt = false`, 결정 0007)
 - 기존 앱 자원: `public.books`, `public.categories`, 버킷 `book-covers`. 건드리지 않음
 - 배포 주소 `https://poguni.github.io/book-chronicle/`, Vite `base: '/book-chronicle/'`
 

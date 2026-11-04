@@ -7,6 +7,7 @@
   import { auth } from './lib/auth.svelte';
   import { ensureSettings } from './lib/data/settings';
   import { ko } from './lib/i18n/ko';
+  import { covers } from './lib/covers.svelte';
   import { library } from './lib/library.svelte';
   import { router } from './lib/router.svelte';
   import { status } from './lib/status.svelte';
@@ -47,7 +48,10 @@
       // 이 효과는 로그인한 사용자가 바뀔 때만 다시 돌도록, 책장 상태는 추적하지 않습니다.
       untrack(() => void library.load());
     } else {
-      untrack(() => library.reset());
+      untrack(() => {
+        library.reset();
+        covers.clear();
+      });
       dialog = null;
     }
   });

@@ -182,32 +182,39 @@
 
 **완료 기준**: 배포된 주소에서 로그인해 직접 입력한 30권이 3개 연도 책장에 꽂혀 보이고, 스마트폰에서 같은 책장이 보인다. (**MVP 완성**)
 
+**Phase 4 완료 (2026-11-04)** — 배포 확인
+
 > **시작 프롬프트 예시**
 > Phase 4를 진행해 줘. PRD F1·F4와 6.1·6.2·6.4·6.7, DESIGN 6장을 기준으로 책 입력과 생성형 책등을 구현해 줘. 책등 계산은 순수 함수로 분리하고 테스트를 붙여 줘.
 
 ---
 
 ## Phase 5. 알라딘 검색과 표지
+> **2026-11-04 변경**: 알라딘 Open API가 2026-10-30에 종료되어 카카오 책 검색 + 국립중앙도서관 ISBN 서지정보로 바꿈(결정 0008). 아래 "알라딘"은 이 두 출처로 읽습니다.
+
 **목표**: 제목·ISBN 검색으로 10초 안에 책을 등록하고, 표지에서 책등 색을 자동으로 뽑는다.
 
 ### 5-1. Edge Function `bookchronicle-aladin` (PRD 5.6, 5.7)
-- [ ] Phase 0 결정에 따라 새로 작성 또는 기존 코드 재사용
-- [ ] `search`(ItemSearch), `lookup`(ItemLookUp), `importCover`(표지 → 300px로 줄여 Storage 저장)
-- [ ] JWT 검증 + **앱 주인 사용자 ID 확인**(`BOOKCHRONICLE_OWNER_ID`, 회원 가입이 열려 있으므로), CORS(GitHub Pages·localhost만), `coverUrl` 도메인 허용 목록
-- [ ] 응답을 앱 형식으로 정리, `aladin_cache` 24시간 캐시
-- [ ] 로컬 실행(`supabase functions serve`)으로 테스트
-- [ ] **사용자 확인 후** `supabase secrets set ALADIN_TTB_KEY=... BOOKCHRONICLE_OWNER_ID=...`, `supabase functions deploy`
-- [ ] 다른 계정(테스트용)으로 호출하면 거부되는지 확인
+- [x] Phase 0 결정에 따라 새로 작성 (`supabase/functions/bookchronicle-aladin/`, 핵심 로직 `handler.ts`)
+- [x] `search`(ItemSearch), `lookup`(ItemLookUp), ~~`importCover`~~ → `cover`(표지 중계, 줄이기·저장은 브라우저, 결정 0007)
+- [x] JWT 검증 + **앱 주인 사용자 ID 확인**(`BOOKCHRONICLE_OWNER_ID`, 회원 가입이 열려 있으므로), CORS(GitHub Pages·localhost만), `coverUrl` 도메인 허용 목록 — 함수 안에서 확인(`verify_jwt = false`)
+- [x] 응답을 앱 형식으로 정리, `aladin_cache` 24시간 캐시
+- [x] ~~로컬 실행(`supabase functions serve`)~~ Deno·Docker가 없어 Vitest로 핵심 로직 검사(15개)
+- [x] ~~알라딘 함수 배포~~(2026-11-04 배포·점검 → 알라딘 API 종료 확인)
+- [x] 카카오·국립중앙도서관으로 바꾼 `bookchronicle-books` 작성, 마이그레이션 `0004`(source에 kakao)
+- [ ] **사용자 확인 후** `db push`(0004), `secrets set KAKAO_REST_API_KEY NLK_CERT_KEY`, `functions deploy bookchronicle-books`, 예전 함수·`ALADIN_TTB_KEY` 지우기
+- [ ] 다른 계정(테스트용)으로 호출하면 거부되는지 확인 — 배포 후 `npm run check:books` (알라딘 함수에서는 보안 점검 6개 통과)
 
 ### 5-2. 앱
-- [ ] `src/lib/aladin.ts`: 함수 호출, 시간 제한 8초, 1회 재시도, 실패 시 수동 입력 안내
-- [ ] ISBN-10 → ISBN-13 변환(단위 테스트)
-- [ ] 분야 매핑: `categoryName` 2단계, 외서 표시, 원본 저장(단위 테스트)
-- [ ] 책 꽂기 대화 상자: 검색(300ms 디바운스), 결과 목록, 선택 시 자동 채움
-- [ ] `workers/palette.worker.ts`: 64×64 축소 → 밝기·채도 필터 → k-평균(k=5) → 바탕·띠·강조 3색(PRD 6.3, 단위 테스트)
-- [ ] 책등 미리 보기(앞뒤 책 사이에 꽂힌 모습)와 팔레트 후보 5색 수정
-- [ ] 표지 표시: Storage에서 Blob으로 내려받아 표시, 화면 안 메모리 캐시
-- [ ] "도서 DB 제공: 알라딘 인터넷서점" 표기
+- [x] `src/lib/aladin.ts`: 함수 호출, 시간 제한 8초, 1회 재시도, 실패 시 수동 입력 안내
+- [x] ISBN-10 → ISBN-13 변환(단위 테스트)
+- [x] 분야 매핑: 24개 분야(결정 0006)로, 없으면 `categoryName` 2단계, 외서 표시, 원본 저장(단위 테스트)
+- [x] 책 꽂기 대화 상자: 검색(300ms 디바운스), 결과 목록, 선택 시 자동 채움 (+ 최근 검색어 5개, 이미 있는 ISBN은 다시 읽기로)
+- [x] `workers/palette.worker.ts`: 64×64 축소 → 밝기·채도 필터 → k-평균(k=5) → 바탕·띠·강조 3색(PRD 6.3, 계산은 `spine/palette.ts` 단위 테스트)
+- [x] 책등 미리 보기(앞뒤 책 사이에 꽂힌 모습)와 팔레트 후보 5색 수정
+- [x] 표지 표시: Storage에서 Blob으로 내려받아 표시, 화면 안 메모리 캐시 (대화 상자. 책장 표지 면은 Phase 6)
+- [x] "도서 DB 제공: 알라딘 인터넷서점" 표기 (사이드바, 검색 상자)
+- [x] 확인: 단위 104개·E2E 53개 통과(가짜 함수·Storage로 검색→고르기→표지 색→저장, ISBN, 중복, 실패·권한 없음)
 
 **완료 기준**: 제목 검색으로 10초 안에 한 권 등록, 표지가 Storage에 저장되고 생성형 책등이 표지와 어울린다. 로그아웃 상태에서는 함수를 호출할 수 없다.
 
