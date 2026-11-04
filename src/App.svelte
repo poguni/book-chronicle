@@ -1,7 +1,7 @@
 <script lang="ts">
   import { tick, untrack } from 'svelte';
   import BookDialog, { type DialogMode } from './components/BookDialog.svelte';
-  import DetailPanel from './components/DetailPanel.svelte';
+  import DetailPanel, { type Selection } from './components/DetailPanel.svelte';
   import OfflineBanner from './components/OfflineBanner.svelte';
   import Sidebar from './components/Sidebar.svelte';
   import { auth } from './lib/auth.svelte';
@@ -19,7 +19,7 @@
   import Recap from './pages/Recap.svelte';
   import Settings from './pages/Settings.svelte';
   import Shelves from './pages/Shelves.svelte';
-  import type { ShelfSpine } from './lib/shelves';
+  import { findSpine, sortReadings, type ShelfSpine } from './lib/shelves';
   import { shelfOf, yearBands } from './lib/stats';
 
   const today = new Date();
@@ -34,8 +34,18 @@
     dialog = { mode, key: ++dialogKey };
   }
 
-  // 900~1199px에서 상세 패널 서랍이 열렸는지 (책을 누르면 열림 — Phase 6)
+  // 900~1199px에서 상세 패널 서랍이 열렸는지 (책을 누르면 열림)
   let detailOpen = $state(false);
+
+  // 꺼내 본 책(기록 ID). 기록이 지워지면 선택도 저절로 풀립니다.
+  let selectedId = $state<string | null>(null);
+  const selection: Selection | null = $derived.by(() => {
+    if (!selectedId) return null;
+    const reading = library.readingById(selectedId);
+    const spine = findSpine(library.shelves, selectedId);
+    if (!reading || !spine) return null;
+    return { spine, reading, readings: sortReadings(library.readingsOf(reading.book_id)) };
+  });
   const withDetail = $derived(router.route.name === 'shelves');
 
   // 로그인하면 settings 행을 만들고(이미 있으면 그대로) 책장을 불러옵니다. 로그아웃하면 비웁니다.
@@ -65,9 +75,36 @@
     openDialog({ kind: 'new' });
   }
 
-  // 꺼내 보기·상세 패널(Phase 6) 전까지는 책등을 누르면 고치기 대화 상자를 엽니다.
+  /**
+   * 책등을 누르면 꺼내 보고(다시 누르면 제자리로) 상세 패널을 그 책으로 바꿉니다(PRD 6.6).
+   * 900~1199px에서는 서랍을 열고, 900px 미만에서는 책장 아래 상세 패널로 스크롤합니다.
+   */
   function pick(spine: ShelfSpine) {
-    openDialog({ kind: 'edit', bookId: spine.bookId, readingId: spine.readingId });
+    if (selectedId === spine.readingId) selectedId = null;
+    else void selectReading(spine.readingId);
+  }
+
+  async function selectReading(readingId: string) {
+    selectedId = readingId;
+    if (window.matchMedia('(max-width: 899px)').matches) {
+      await tick();
+      const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      document
+        .querySelector('.detail .selected')
+        ?.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' });
+    } else if (window.matchMedia('(max-width: 1199px)').matches) {
+      detailOpen = true;
+    }
+  }
+
+  function editSelected() {
+    if (selection)
+      openDialog({ kind: 'edit', bookId: selection.spine.bookId, readingId: selection.reading.id });
+  }
+
+  function toggleBookOfYear() {
+    const year = selection?.reading.year;
+    if (selection && year != null) void library.toggleBookOfYear(year, selection.spine.bookId);
   }
 
   /** 연도 나이테를 누르면 주소는 그대로 두고 그 연도 책장으로 스크롤만 합니다(결정 0001-12). */
@@ -85,8 +122,11 @@
       ?.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' });
   }
 
+  /** Esc: 꺼낸 책을 제자리로, 서랍도 닫음. 대화 상자가 열려 있으면 대화 상자만 닫힘 */
   function onkeydown(e: KeyboardEvent) {
-    if (e.key === 'Escape' && detailOpen) detailOpen = false;
+    if (e.key !== 'Escape' || dialog) return;
+    detailOpen = false;
+    selectedId = null;
   }
 </script>
 
@@ -132,6 +172,7 @@
           onpick={pick}
           onreorder={(ids) => library.reorder(ids)}
           onretry={() => library.load()}
+          {selectedId}
         />
       {/if}
     </main>
@@ -140,8 +181,13 @@
       <DetailPanel
         {today}
         spines={thisYearSpines}
+        shelves={library.shelves}
+        {selection}
         open={detailOpen}
         onclose={() => (detailOpen = false)}
+        onedit={editSelected}
+        onbookofyear={toggleBookOfYear}
+        onselectreading={(id) => void selectReading(id)}
       />
     {/if}
   </div>

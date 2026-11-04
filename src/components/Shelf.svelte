@@ -18,6 +18,7 @@
     spines = [],
     onpick,
     onreorder,
+    selectedId = null,
     empty,
   }: {
     kind?: ShelfKind;
@@ -29,6 +30,8 @@
     onpick?: (spine: ShelfSpine) => void;
     /** 끌어 옮기기·Alt+←→로 바꾼 새 순서(기록 ID) */
     onreorder?: (readingIds: string[]) => void;
+    /** 꺼내 본 책의 기록 ID */
+    selectedId?: string | null;
     /** 책이 없을 때 보여 줄 내용 */
     empty?: Snippet;
   } = $props();
@@ -236,6 +239,7 @@
                 fit={fits[i] ?? null}
                 dataId={s.readingId}
                 dragging={dragId === s.readingId}
+                selected={selectedId === s.readingId}
                 describedby={onreorder && spines.length > 1 ? `${id}-reorder` : undefined}
                 onclick={() => onpick?.(s)}
               />

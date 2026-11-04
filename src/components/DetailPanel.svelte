@@ -1,20 +1,69 @@
+<script lang="ts" module>
+  import type { ReadingRow, ShelfSpine } from '../lib/shelves';
+
+  /** 꺼내 본 책: 고른 기록과 그 책의 모든 기록(다시 읽기 포함) */
+  export type Selection = { spine: ShelfSpine; reading: ReadingRow; readings: ReadingRow[] };
+</script>
+
 <script lang="ts">
+  import { covers } from '../lib/covers.svelte';
   import { formatNumber, monthBars } from '../lib/format';
   import { ko } from '../lib/i18n/ko';
-  import type { ShelfSpine } from '../lib/shelves';
+  import type { ShelfYear } from '../lib/shelves';
+  import { inkFor } from '../lib/spine/color';
   import { averageRating, monthCounts, topCategory } from '../lib/stats';
   import EmptyState from './EmptyState.svelte';
   import Icon from './Icon.svelte';
   import MonthBars from './MonthBars.svelte';
+  import Stars from './Stars.svelte';
+  import YearRings from './YearRings.svelte';
 
-  // 상세 패널 (DESIGN 7.3). 선택한 책과 올해의 나이테는 Phase 6에서 채웁니다.
+  // 상세 패널 (DESIGN 7.3): 꺼내 본 책 + 올해 한눈에 + 올해의 나이테.
   // "한눈에"는 올해 고정입니다(결정 0001-9). spines는 올해 책장의 책등입니다.
   let {
     today,
     spines,
+    shelves,
+    selection,
     open,
     onclose,
-  }: { today: Date; spines: ShelfSpine[]; open: boolean; onclose: () => void } = $props();
+    onedit,
+    onbookofyear,
+    onselectreading,
+  }: {
+    today: Date;
+    spines: ShelfSpine[];
+    shelves: ShelfYear[];
+    selection: Selection | null;
+    open: boolean;
+    onclose: () => void;
+    onedit: () => void;
+    onbookofyear: () => void;
+    onselectreading: (readingId: string) => void;
+  } = $props();
+
+  const sel = $derived(selection?.spine ?? null);
+  const coverUrl = $derived(sel ? covers.url(sel.coverPath) : null);
+  // 표지가 없으면 팔레트로 만든 간이 표지
+  const art = $derived(
+    sel ? `linear-gradient(to top, ${sel.palette.band} 0 28%, ${sel.palette.base} 28% 100%)` : '',
+  );
+  const finishedFact = $derived(
+    !sel
+      ? ''
+      : sel.status === 'reading'
+        ? ko.detail.reading
+        : sel.status === 'dropped'
+          ? ko.detail.dropped
+          : sel.finishedAt
+            ? ko.detail.finishedValue(sel.finishedAt)
+            : ko.detail.finishedUnknown,
+  );
+  const memo = $derived(selection?.reading.note || ko.detail.noMemo);
+  // 그해의 책은 완독일이 있는 완독 기록만 고를 수 있음
+  const canBookOfYear = $derived(
+    selection?.reading.status === 'finished' && selection.reading.year !== null,
+  );
 
   const year = $derived(today.getFullYear());
   const bars = $derived(monthBars(monthCounts(spines), year, today));
@@ -28,9 +77,91 @@
     <Icon name="close" strokeWidth={2} />
   </button>
 
-  <section class="selected">
-    <span class="label">{ko.detail.selected}</span>
-    <EmptyState message={ko.detail.noSelection} />
+  <section class="selected" aria-labelledby="sel-label">
+    <span class="label" id="sel-label">{ko.detail.selected}</span>
+    {#if selection && sel}
+      <div class="sel-head">
+        <div
+          class="big-cover"
+          class:image={coverUrl}
+          style:--art={art}
+          style:--fgc={inkFor(sel.palette.base)}
+        >
+          {#if coverUrl}
+            <img src={coverUrl} alt={ko.detail.coverAlt(sel.title)} />
+          {:else}
+            <b aria-hidden="true">{sel.title}</b>
+            {#if sel.author}<small aria-hidden="true">{sel.author}</small>{/if}
+          {/if}
+        </div>
+        <div class="sel-info">
+          {#if sel.isBookOfYear}<span class="tag">{ko.detail.bookOfYearTag}</span>{/if}
+          <h3 class="display">{sel.title}</h3>
+          {#if sel.author}<span class="author">{sel.author}</span>{/if}
+          <Stars value={sel.rating} />
+        </div>
+      </div>
+      <dl class="facts">
+        <div>
+          <dt>{ko.detail.pages}</dt>
+          <dd>
+            {sel.knownPages
+              ? ko.detail.pagesValue(formatNumber(sel.knownPages))
+              : ko.detail.pagesUnknown}
+          </dd>
+        </div>
+        <div>
+          <dt>{ko.detail.finished}</dt>
+          <dd>{finishedFact}</dd>
+        </div>
+        <div>
+          <dt>{ko.detail.category}</dt>
+          <dd>{sel.category ?? ko.detail.none}</dd>
+        </div>
+      </dl>
+      {#if selection.readings.length > 1}
+        <div class="reads">
+          <span class="label" id="reads-label">{ko.detail.readings(selection.readings.length)}</span
+          >
+          <ul aria-labelledby="reads-label">
+            {#each selection.readings as r (r.id)}
+              <li>
+                <button
+                  type="button"
+                  aria-current={r.id === selection.reading.id ? 'true' : undefined}
+                  onclick={() => onselectreading(r.id)}
+                >
+                  <span
+                    >{ko.detail.readingItem({
+                      date: r.finished_at,
+                      status:
+                        r.status === 'reading' || r.status === 'dropped' ? r.status : 'finished',
+                    })}</span
+                  >
+                  {#if r.rating !== null}<span class="r">★ {Number(r.rating)}</span>{/if}
+                </button>
+              </li>
+            {/each}
+          </ul>
+        </div>
+      {/if}
+      <p class="memo" aria-label={ko.detail.memoLabel}>{memo}</p>
+      <div class="row-btns">
+        <button type="button" class="btn" onclick={onedit}>{ko.detail.edit}</button>
+        {#if canBookOfYear}
+          <button
+            type="button"
+            class="btn accent"
+            aria-pressed={sel.isBookOfYear}
+            onclick={onbookofyear}
+          >
+            {sel.isBookOfYear ? ko.detail.unmakeBookOfYear : ko.detail.makeBookOfYear}
+          </button>
+        {/if}
+      </div>
+    {:else}
+      <EmptyState message={ko.detail.noSelection} />
+    {/if}
   </section>
 
   <section class="block">
@@ -53,6 +184,10 @@
       </div>
     </div>
     <MonthBars {bars} label={ko.detail.monthsLabel(year)} />
+  </section>
+
+  <section class="block">
+    <YearRings {shelves} {year} />
   </section>
 </aside>
 
@@ -83,6 +218,179 @@
     min-height: 174px;
     border: 1px dashed var(--line);
     border-radius: var(--radius-l);
+  }
+  /* 시안 '선택한 책' 절을 옮김 */
+  .sel-head {
+    display: flex;
+    gap: 18px;
+    align-items: flex-end;
+  }
+  .big-cover {
+    flex: none;
+    width: 120px;
+    height: 174px;
+    border-radius: 2px 6px 6px 2px;
+    background: var(--art);
+    color: var(--fgc);
+    padding: 14px 12px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    overflow: hidden;
+    box-shadow:
+      inset 6px 0 0 rgba(0, 0, 0, 0.15),
+      var(--book-shadow);
+    position: relative;
+  }
+  .big-cover.image {
+    padding: 0;
+    background: var(--card);
+  }
+  .big-cover img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+  /* 실제 표지 위에도 제본선 그림자 */
+  .big-cover.image::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    box-shadow: inset 6px 0 0 rgba(0, 0, 0, 0.15);
+    pointer-events: none;
+  }
+  .big-cover b {
+    font-family: var(--font-display);
+    font-weight: var(--display-weight);
+    font-size: 15px;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+  }
+  .big-cover small {
+    font-size: 10px;
+    opacity: 0.85;
+  }
+  .sel-info {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+  }
+  .sel-info h3 {
+    margin: 0;
+    font-size: 22px;
+    line-height: 1.3;
+    overflow-wrap: anywhere;
+  }
+  .author {
+    font-size: 13px;
+    color: var(--muted);
+  }
+  .tag {
+    align-self: flex-start;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--accent-ink);
+    background: var(--accent);
+    padding: 2px 8px;
+    border-radius: 999px;
+  }
+  .facts {
+    margin: 0;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .facts div {
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: var(--card);
+    border: 1px solid var(--line);
+    min-width: 0;
+  }
+  .facts dt {
+    font-size: 11px;
+    color: var(--muted);
+  }
+  .facts dd {
+    margin: 2px 0 0;
+    font-weight: 700;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .reads {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .reads ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .reads button {
+    width: 100%;
+    min-height: 40px;
+    padding: 0 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-radius: 10px;
+    border: 1px solid var(--line);
+    background: var(--card);
+    color: var(--text);
+    font-size: 13px;
+    cursor: pointer;
+  }
+  .reads button[aria-current='true'] {
+    border-color: var(--accent);
+    font-weight: 700;
+  }
+  .reads .r {
+    color: var(--accent);
+  }
+  /* 공책 줄 메모 (DESIGN 7.3) */
+  .memo {
+    margin: 0;
+    padding: 6px 4px;
+    font-family: var(--font-display);
+    font-weight: 400;
+    font-size: 16px;
+    line-height: 32px;
+    min-height: 76px;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    background: repeating-linear-gradient(
+      transparent,
+      transparent 31px,
+      var(--line) 31px,
+      var(--line) 32px
+    );
+  }
+  .row-btns {
+    display: flex;
+    gap: 8px;
+  }
+  .btn {
+    flex: 1;
+    height: 44px;
+    border-radius: 10px;
+    border: 1px solid var(--line);
+    background: var(--card);
+    color: var(--text);
+    cursor: pointer;
+    font-size: 14px;
+  }
+  .btn.accent {
+    border-color: var(--accent);
+    color: var(--accent);
+    font-weight: 700;
+    background: transparent;
   }
   .block {
     display: flex;

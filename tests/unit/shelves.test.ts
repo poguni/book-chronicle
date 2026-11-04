@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   buildShelves,
+  findSpine,
+  sortReadings,
   sortSpines,
   type BookRow,
   type ReadingRow,
@@ -12,6 +14,7 @@ import {
   ringCount,
   topCategory,
   yearBands,
+  yearRings,
   yearSummary,
 } from '../../src/lib/stats';
 
@@ -273,5 +276,68 @@ describe('통계', () => {
       [2025, 1],
     ]);
     expect(bands[0]?.segments[0]).toEqual({ pages: 100, color: '#2F4F6F' });
+  });
+});
+
+describe('Phase 6: 별점순·쪽수순, 꺼내 보기 찾기, 나이테', () => {
+  const shelves = buildShelves(
+    [
+      book('a', { pages: 100, cover_path: 'u/covers/a.jpg' }),
+      book('b', { pages: 500 }),
+      book('c', { pages: 300 }),
+    ],
+    [
+      reading('1', 'a', '2026-01-01', { rating: 3 }),
+      reading('2', 'b', '2026-02-01', { rating: null }),
+      reading('3', 'c', '2026-03-01', { rating: 4.5 }),
+      reading('4', 'a', '2025-05-01'),
+    ],
+    noYears,
+    {},
+    2026,
+  );
+  const spines = shelves.find((s) => s.year === 2026)!.spines;
+
+  it('별점순은 높은 것부터, 별점 없음은 끝', () => {
+    expect(sortSpines(spines, 'rating').map((s) => s.bookId)).toEqual(['c', 'a', 'b']);
+  });
+
+  it('쪽수순은 두꺼운 책부터', () => {
+    expect(sortSpines(spines, 'pages').map((s) => s.bookId)).toEqual(['b', 'c', 'a']);
+  });
+
+  it('기록 ID로 책등을 찾고, 표지 경로를 담는다', () => {
+    expect(findSpine(shelves, '4')?.finishedAt).toBe('2025-05-01');
+    expect(findSpine(shelves, '1')?.coverPath).toBe('u/covers/a.jpg');
+    expect(findSpine(shelves, 'none')).toBeNull();
+  });
+
+  it('한 책의 기록은 완독일순, 완독일 없는 기록은 끝', () => {
+    const list = sortReadings([
+      reading('x', 'a', null),
+      reading('y', 'a', '2026-01-01'),
+      reading('z', 'a', '2024-01-01'),
+    ]);
+    expect(list.map((r) => r.id)).toEqual(['z', 'y', 'x']);
+  });
+
+  it('나이테: 바깥 고리가 최근 연도, 원은 안으로 갈수록 작아지고 가운데 점으로 끝남', () => {
+    const { discs, years } = yearRings(shelves, 132);
+    expect(years).toEqual([2026, 2025]);
+    expect(discs[0]!.size).toBe(132);
+    expect(discs[0]!.background).toMatch(/^conic-gradient/);
+    expect(discs[1]!.background).toBe('var(--ring-gap)');
+    for (let i = 1; i < discs.length; i++)
+      expect(discs[i]!.size).toBeLessThanOrEqual(discs[i - 1]!.size);
+    expect(discs.at(-1)).toEqual({ size: 10, background: 'var(--accent)' });
+    // 올해 3권 고리가 작년 1권 고리보다 두꺼움
+    const thisYear = discs[0]!.size - discs[1]!.size;
+    const lastYear = discs[2]!.size - discs[3]!.size;
+    expect(thisYear).toBeGreaterThan(lastYear);
+  });
+
+  it('책이 없으면 가운데 점만', () => {
+    const empty = buildShelves([], [], noYears, {}, 2026);
+    expect(yearRings(empty).discs).toEqual([{ size: 10, background: 'var(--accent)' }]);
   });
 });

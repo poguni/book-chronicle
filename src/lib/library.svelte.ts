@@ -5,7 +5,7 @@ import { COVER_BUCKET, deleteBook, insertBook, listBooks, updateBook } from './d
 import { uploadCover } from './data/covers';
 import { deleteReading, insertReading, listReadings, updateReading } from './data/readings';
 import { getSettings } from './data/settings';
-import { listYears } from './data/years';
+import { listYears, setBookOfYear } from './data/years';
 import {
   buildShelves,
   type BookRow,
@@ -218,6 +218,15 @@ class Library {
     });
     if (!ok) await this.load();
     return ok;
+  }
+
+  /**
+   * 그해의 책으로 정하거나(이미 그 책이면) 해제합니다. 그해의 책은 한 해에 1권(PRD F6, P0).
+   */
+  toggleBookOfYear(year: number, bookId: string): Promise<boolean> {
+    const current = this.years.find((y) => y.year === year)?.book_of_year ?? [];
+    const next = current[0] === bookId ? [] : [bookId];
+    return this.#save(() => setBookOfYear(year, next));
   }
 
   /** 기록이 하나뿐이면 책까지 지우고, 여러 개면 그 기록만 지웁니다. */

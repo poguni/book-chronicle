@@ -22,6 +22,8 @@
     { value: 'date', label: ko.top.sortDate },
     { value: 'color', label: ko.top.sortColor },
     { value: 'category', label: ko.top.sortCategory },
+    { value: 'rating', label: ko.top.sortRating },
+    { value: 'pages', label: ko.top.sortPages },
   ];
 </script>
 
@@ -137,6 +139,8 @@
   }
   .sort {
     display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
     gap: 4px;
   }
   .chip {
@@ -162,11 +166,13 @@
     .tools {
       flex-basis: 100%;
     }
+    /* 정렬 칩 6개: 3칸씩 두 줄 */
     .sort {
       width: 100%;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
     }
     .sort .chip {
-      flex: 1;
       height: 40px;
     }
   }

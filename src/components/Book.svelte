@@ -1,10 +1,12 @@
 <script lang="ts">
+  import { covers } from '../lib/covers.svelte';
   import { ko } from '../lib/i18n/ko';
   import type { ShelfSpine } from '../lib/shelves';
   import { inkFor } from '../lib/spine/color';
   import type { TitleFit } from '../lib/spine/geometry';
 
-  // 책 한 권 = 책등 면 + 표지 면 CSS 3D 상자 (DESIGN 6.2). 꺼내 보기 회전은 Phase 6에서 켭니다.
+  // 책 한 권 = 책등 면 + 표지 면 CSS 3D 상자 (DESIGN 6.2).
+  // 고르면(selected) 앞으로 빠져나와 돌면서 표지 면이 보입니다(꺼내 보기, PRD 6.6).
   let {
     spine,
     fit,
@@ -13,6 +15,7 @@
     dataId,
     dragging = false,
     describedby,
+    selected,
   }: {
     spine: Pick<
       ShelfSpine,
@@ -26,7 +29,7 @@
       | 'status'
       | 'finishedAt'
       | 'isBookOfYear'
-    >;
+    > & { coverPath?: string | null };
     /** 제목 글자 크기·줄 수 (fitTitle). null이면 제목을 그리지 않음 */
     fit: TitleFit | null;
     onclick?: () => void;
@@ -35,13 +38,18 @@
     dataId?: string;
     dragging?: boolean;
     describedby?: string;
+    /** 꺼내 본 책이면 true. 책장 밖(미리 보기)에서는 undefined라 aria-pressed를 달지 않음 */
+    selected?: boolean;
   } = $props();
 
   const fg = $derived(inkFor(spine.palette.base));
   const fgl = $derived(inkFor(spine.palette.band));
-  // 표지 면: 실제 표지(Phase 5)가 없으면 팔레트로 만든 간이 표지
+  // 표지 면: 꺼냈을 때만 실제 표지를 내려받고, 없으면 팔레트로 만든 간이 표지
+  const coverUrl = $derived(selected && spine.coverPath ? covers.url(spine.coverPath) : null);
   const art = $derived(
-    `linear-gradient(to top, ${spine.palette.band} 0 28%, ${spine.palette.base} 28% 100%)`,
+    coverUrl
+      ? `center / cover no-repeat url("${coverUrl}")`
+      : `linear-gradient(to top, ${spine.palette.band} 0 28%, ${spine.palette.base} 28% 100%)`,
   );
   const label = $derived(
     ko.book.label({
@@ -72,6 +80,7 @@
   style:--art={art}
   aria-label={label}
   aria-describedby={describedby}
+  aria-pressed={selected}
   {tabindex}
   {onclick}
 >
@@ -88,8 +97,10 @@
     {/if}
   </span>
   <span class="face cover" aria-hidden="true">
-    <b>{spine.title}</b>
-    {#if spine.author}<small>{spine.author}</small>{/if}
+    {#if !coverUrl}
+      <b>{spine.title}</b>
+      {#if spine.author}<small>{spine.author}</small>{/if}
+    {/if}
   </span>
   {#if spine.isBookOfYear}<span class="ribbon" aria-hidden="true"></span>{/if}
 </button>
@@ -119,6 +130,11 @@
   .book:hover,
   .book:focus-visible {
     transform: translateY(-8px);
+  }
+  /* 꺼내 보기 (DESIGN 8장): 들리며 앞으로 나와 Y축으로 돌아 표지 면이 비스듬히 보임 */
+  .book[aria-pressed='true'] {
+    transform: translateY(-14px) translateZ(36px) rotateY(-62deg);
+    z-index: 5;
   }
   /* 끌어 옮기는 중인 책: 조금 들려 있고 반투명 */
   .book.dragging {
@@ -260,6 +276,10 @@
     overflow: hidden;
   }
   /* 꽂혀 있을 때는 표지 면을 숨김: 원근 때문에 얇은 책등 옆으로 비쳐 이웃 책을 가림 (결정 0009) */
+  /* 꺼냈을 때 표지 면이 옆 책을 덮어도 옆 책을 누를 수 있게 */
+  .cover {
+    pointer-events: none;
+  }
   .book:not([aria-pressed='true']) .cover {
     visibility: hidden;
   }
@@ -285,9 +305,29 @@
     clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 78%, 0 100%);
     transform: translateZ(1px);
   }
+  /* 움직임 줄이기(운영체제 설정 또는 앱 설정): 회전 없이 들림 + 강조색 테두리만 */
   @media (prefers-reduced-motion: reduce) {
     .book {
       transition: none;
     }
+    .book[aria-pressed='true'] {
+      transform: translateY(-14px);
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+    .book[aria-pressed='true'] .cover {
+      visibility: hidden;
+    }
+  }
+  :global([data-motion='reduce']) .book {
+    transition: none;
+  }
+  :global([data-motion='reduce']) .book[aria-pressed='true'] {
+    transform: translateY(-14px);
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+  :global([data-motion='reduce']) .book[aria-pressed='true'] .cover {
+    visibility: hidden;
   }
 </style>

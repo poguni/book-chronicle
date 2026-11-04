@@ -51,6 +51,8 @@ export const ko = {
     sortDate: '완독일순',
     sortColor: '색상순',
     sortCategory: '분야순',
+    sortRating: '별점순',
+    sortPages: '쪽수순',
   },
   shelf: {
     meta: (count: number, pages: string) => `${count}권 · ${pages}쪽`,
@@ -185,6 +187,42 @@ export const ko = {
     statTop: '가장 많이',
     none: '–',
     monthsLabel: (year: number) => `${year}년 월별 완독 권수`,
+    bookOfYearTag: '그해의 책',
+    pages: '쪽수',
+    pagesValue: (n: string) => `${n}쪽`,
+    pagesUnknown: '모름',
+    finished: '완독',
+    finishedValue: (date: string) => `${date.slice(0, 4)}.${Number(date.slice(5, 7))}`,
+    finishedUnknown: '날짜 모름',
+    category: '분야',
+    reading: '읽는 중',
+    dropped: '중단',
+    rating: (n: number | null) => (n === null ? '별점 없음' : `별점 ${n}점`),
+    readings: (n: number) => `독서 기록 ${n}번`,
+    readingItem: (p: { date: string | null; status: 'finished' | 'reading' | 'dropped' }) =>
+      p.status === 'reading'
+        ? '읽는 중'
+        : p.status === 'dropped'
+          ? '중단'
+          : p.date
+            ? `${p.date.slice(0, 4)}.${Number(p.date.slice(5, 7))} 완독`
+            : '완독(날짜 모름)',
+    noMemo: '아직 남긴 한 줄이 없어요. 이 책을 덮으며 떠오른 문장을 남겨 볼까요?',
+    memoLabel: '한 줄 메모',
+    edit: '기록 수정',
+    makeBookOfYear: '그해의 책으로',
+    unmakeBookOfYear: '그해의 책에서 빼기',
+    coverAlt: (title: string) => `${title} 표지`,
+    ringsTitle: '올해의 나이테',
+    ringsLabel: (years: number[]) =>
+      years.length === 0
+        ? '아직 나이테가 없어요.'
+        : `${years[years.length - 1]}년부터 ${years[0]}년까지의 독서 나이테. 바깥 고리가 ${years[0]}년이고, 고리 조각 하나가 책 한 권입니다.`,
+    ringsEmpty: '올해 첫 책을 꽂으면 새 고리가 생겨요.',
+    ringsThickest: (ordinal: string, n: number) =>
+      `${ordinal} 고리가 ${n}권으로 가장 두꺼워졌어요.`,
+    ringsGrowing: (ordinal: string, n: number) => `${ordinal} 고리에 ${n}권이 쌓였어요.`,
+    toRecap: '회고 카드 만들기',
   },
   pages: {
     shelves: '책장',
@@ -197,6 +235,12 @@ export const ko = {
   },
   recapOfYear: (year: number) => `${year}년 연말 회고`,
   placeholder: '이 화면은 곧 채워질 예정이에요.',
+  settings: {
+    motion: '움직임 줄이기',
+    motionHint:
+      '책을 꺼낼 때 돌아가는 움직임 없이 살짝 들리고 테두리만 표시해요. 이 기기에만 저장돼요. 끄면 기기의 동작 줄이기 설정을 따라요.',
+    more: '테마·분야 관리·백업 같은 다른 설정은 곧 채워질 예정이에요.',
+  },
   login: {
     brand: '북크로니클 · BOOK CHRONICLE',
     title: '책장으로 돌아오신 걸 환영해요',

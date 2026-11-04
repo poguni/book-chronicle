@@ -63,6 +63,12 @@ export async function fakeDb(page: Page, seed: Partial<FakeDb> = {}): Promise<Fa
       const body = req.postDataJSON() as Row | Row[];
       for (const r of Array.isArray(body) ? body : [body]) {
         if (table === 'settings' && rows.some((x) => x.user_id === USER_ID)) continue;
+        // years는 (user_id, year)로 upsert: 있으면 넘긴 칸만 고침
+        const sameYear = table === 'years' ? rows.find((x) => x.year === r.year) : undefined;
+        if (sameYear) {
+          Object.assign(sameYear, r, { updated_at: now() });
+          continue;
+        }
         const row: Row = { user_id: USER_ID, created_at: now(), updated_at: now(), ...r };
         if (table === 'readings') {
           row.id ??= `reading-${tick}`;

@@ -74,3 +74,50 @@ export function yearBands(shelves: readonly ShelfYear[]) {
       segments: s.spines.map((sp) => ({ pages: sp.pages, color: sp.palette.base })),
     }));
 }
+
+/** 올해의 나이테 원 하나: 지름(px), 색(원뿔 그러데이션 또는 CSS 변수) */
+export type RingDisc = { size: number; background: string };
+
+/**
+ * 올해의 나이테 (DESIGN 7.3). 바깥 고리가 가장 최근 연도, 고리 두께는 권수에 비례,
+ * 고리 조각 하나가 책 한 권(색 = 책등 바탕색, 조각 크기 = 쪽수). 고리 사이 4px 틈, 가운데 강조색 점.
+ * 크기가 줄어드는 원을 겹쳐 그립니다. 책이 있는 해만, 최근 maxYears해까지.
+ */
+export function yearRings(
+  shelves: readonly ShelfYear[],
+  size = 132,
+  maxYears = 6,
+): { discs: RingDisc[]; years: number[] } {
+  const GAP = 4;
+  const CENTER = 10;
+  const MIN = 2;
+  const years = shelves
+    .filter((s): s is ShelfYear & { year: number } => s.kind === 'year' && s.count > 0)
+    .sort((a, b) => b.year - a.year)
+    .slice(0, maxYears);
+  const discs: RingDisc[] = [];
+  if (years.length > 0) {
+    const total = years.reduce((n, s) => n + s.count, 0);
+    const room = (size - CENTER) / 2 - GAP * years.length - MIN * years.length;
+    let radius = size / 2;
+    for (const shelf of years) {
+      const thickness = MIN + Math.max(0, room) * (shelf.count / total);
+      const pages = shelf.spines.reduce((n, sp) => n + sp.pages, 0);
+      let acc = 0;
+      const stops = shelf.spines.map((sp) => {
+        const from = (acc / pages) * 100;
+        acc += sp.pages;
+        return `${sp.palette.base} ${from.toFixed(2)}% ${((acc / pages) * 100).toFixed(2)}%`;
+      });
+      discs.push({
+        size: Math.round(radius * 2),
+        background: `conic-gradient(from -90deg, ${stops.join(', ')})`,
+      });
+      radius -= thickness;
+      discs.push({ size: Math.round(radius * 2), background: 'var(--ring-gap)' });
+      radius -= GAP;
+    }
+  }
+  discs.push({ size: CENTER, background: 'var(--accent)' });
+  return { discs, years: years.map((s) => s.year) };
+}

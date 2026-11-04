@@ -26,6 +26,8 @@ export type ShelfSpine = {
   height: number;
   palette: Palette;
   pattern: Pattern;
+  /** Storage 표지 경로(없으면 null). 꺼내 보기 표지 면과 상세 패널에 씀 */
+  coverPath: string | null;
   status: ReadingStatus;
   finishedAt: string | null;
   rating: number | null;
@@ -48,7 +50,7 @@ export type ShelfYear = {
   bookOfYearTitle: string | null;
 };
 
-export type SortKey = 'manual' | 'date' | 'color' | 'category';
+export type SortKey = 'manual' | 'date' | 'color' | 'category' | 'rating' | 'pages';
 
 function byDate(a: ShelfSpine, b: ShelfSpine): number {
   const fa = a.finishedAt ?? '';
@@ -58,7 +60,8 @@ function byDate(a: ShelfSpine, b: ShelfSpine): number {
 }
 
 /**
- * 내 순서(기본) / 완독일순 / 색상순 / 분야순. 같으면 완독일순.
+ * 내 순서(기본) / 완독일순 / 색상순 / 분야순 / 별점순(높은 것부터, 별점 없음은 끝) /
+ * 쪽수순(두꺼운 책부터). 같으면 완독일순.
  * 내 순서: 끌어 옮겨 정한 순서대로, 순서가 없는 책(새로 꽂은 책)은 그 뒤에 완독일순 (결정 0009)
  */
 export function sortSpines(spines: readonly ShelfSpine[], key: SortKey): ShelfSpine[] {
@@ -74,6 +77,12 @@ export function sortSpines(spines: readonly ShelfSpine[], key: SortKey): ShelfSp
   }
   if (key === 'color') {
     return list.sort((a, b) => hueKey(a.palette.base) - hueKey(b.palette.base) || byDate(a, b));
+  }
+  if (key === 'rating') {
+    return list.sort((a, b) => (b.rating ?? -1) - (a.rating ?? -1) || byDate(a, b));
+  }
+  if (key === 'pages') {
+    return list.sort((a, b) => b.pages - a.pages || byDate(a, b));
   }
   if (key === 'category') {
     return list.sort((a, b) => {
@@ -123,6 +132,7 @@ export function buildShelves(
       height: spineHeight(book.id),
       palette: spine.palette,
       pattern: patternFor(spine.pattern, book.category, patternMap),
+      coverPath: book.cover_path,
       status,
       finishedAt: status === 'finished' ? r.finished_at : null,
       rating: r.rating === null ? null : Number(r.rating),
@@ -159,4 +169,23 @@ export function buildShelves(
     ...order.map((year) => shelf(year === null ? 'unknown' : 'year', year, groups.get(year) ?? [])),
     ...(dropped.length > 0 ? [shelf('dropped', null, dropped)] : []),
   ];
+}
+
+/** 기록 ID로 책장 위 책등 찾기 (꺼내 보기 선택) */
+export function findSpine(shelves: readonly ShelfYear[], readingId: string): ShelfSpine | null {
+  for (const shelf of shelves) {
+    const hit = shelf.spines.find((s) => s.readingId === readingId);
+    if (hit) return hit;
+  }
+  return null;
+}
+
+/** 한 책의 독서 기록을 읽은 순서대로: 완독일 → 완독일 없는 기록(만든 순) */
+export function sortReadings(readings: readonly ReadingRow[]): ReadingRow[] {
+  return [...readings].sort((a, b) => {
+    const fa = a.finished_at ?? '9999';
+    const fb = b.finished_at ?? '9999';
+    if (fa !== fb) return fa < fb ? -1 : 1;
+    return a.created_at < b.created_at ? -1 : a.created_at > b.created_at ? 1 : 0;
+  });
 }

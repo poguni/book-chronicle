@@ -19,6 +19,7 @@
     onpick,
     onreorder,
     onretry,
+    selectedId,
   }: {
     today: Date;
     shelves: ShelfYear[];
@@ -26,6 +27,7 @@
     onaddbook: () => void;
     onpick: (spine: ShelfSpine) => void;
     onreorder: (readingIds: string[]) => void;
+    selectedId: string | null;
     onretry: () => void;
   } = $props();
 
@@ -68,6 +70,7 @@
         spines={sortSpines(shelf.spines, sort)}
         {onpick}
         onreorder={reorder}
+        {selectedId}
       >
         {#snippet empty()}
           <EmptyState message={ko.shelf.empty}>

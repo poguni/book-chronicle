@@ -51,6 +51,16 @@ function seed(perYear: Record<number, number>, pages = 300): Partial<FakeDb> {
   return { books, readings };
 }
 
+/** 책등을 눌러 꺼내 보고(이미 꺼내 있으면 그대로), 상세 패널의 '기록 수정'을 누릅니다. */
+async function openEdit(page: Page, name: RegExp) {
+  const book = page.getByRole('button', { name }).first();
+  if ((await book.getAttribute('aria-pressed')) !== 'true') await book.click();
+  await page
+    .getByRole('complementary', { name: '선택한 책과 올해 요약' })
+    .getByRole('button', { name: '기록 수정' })
+    .click();
+}
+
 async function openAddDialog(page: Page) {
   await page.getByRole('main').getByRole('button', { name: '책 한 권 꽂기' }).click();
   return page.getByRole('dialog', { name: '책 한 권 꽂기' });
@@ -130,7 +140,7 @@ test('저장에 실패하면 입력 내용을 그대로 두고 알려 준다', a
 
 test('책등을 눌러 기록을 고치고, 지울 수 있다', async ({ page }) => {
   const db = await loginAs(page, '#/', seed({ [year]: 2 }));
-  await page.getByRole('button', { name: new RegExp(`^${year}년의 책 1,`) }).click();
+  await openEdit(page, new RegExp(`^${year}년의 책 1,`));
   const dialog = page.getByRole('dialog', { name: '기록 고치기' });
   await expect(dialog.getByRole('textbox', { name: '제목', exact: true })).toHaveValue(
     `${year}년의 책 1`,
@@ -141,7 +151,7 @@ test('책등을 눌러 기록을 고치고, 지울 수 있다', async ({ page })
   await expect(page.getByRole('button', { name: /^고친 제목,/ })).toBeVisible();
   expect(db.books.find((b) => b.id === `book-${year}-0`)?.title).toBe('고친 제목');
 
-  await page.getByRole('button', { name: /^고친 제목,/ }).click();
+  await openEdit(page, /^고친 제목,/);
   await page.getByRole('button', { name: '이 책 지우기' }).click();
   await page.getByRole('button', { name: '네, 지울게요' }).click();
   await expect(page.getByRole('button', { name: /^고친 제목,/ })).toHaveCount(0);
@@ -151,7 +161,7 @@ test('책등을 눌러 기록을 고치고, 지울 수 있다', async ({ page })
 
 test('다시 읽은 기록을 더하면 같은 해에 두 권으로 꽂힌다', async ({ page }) => {
   const db = await loginAs(page, '#/', seed({ [year]: 1 }));
-  await page.getByRole('button', { name: new RegExp(`^${year}년의 책 1,`) }).click();
+  await openEdit(page, new RegExp(`^${year}년의 책 1,`));
   await page.getByRole('button', { name: '다시 읽은 기록 더하기' }).click();
   const dialog = page.getByRole('dialog', { name: '다시 읽은 기록 더하기' });
   await dialog.getByLabel('완독일', { exact: true }).fill(`${year}-12-01`);
@@ -193,7 +203,7 @@ test('한 해 책이 선반 폭을 넘으면 다음 줄로 넘어간다', async 
   await loginAs(page, '#/', seed({ [year]: 30 }, 900));
   const shelf = page.locator(`#y${year}`);
   await expect(shelf.locator('button.book')).toHaveCount(30);
-  expect(await shelf.locator('.plank').count()).toBeGreaterThan(1);
+  await expect.poll(() => shelf.locator('.plank').count()).toBeGreaterThan(1);
   expect(await horizontalOverflow(page)).toBeLessThanOrEqual(0);
 });
 
@@ -240,7 +250,7 @@ test('분야는 목록에서 고르거나, 맨 위 직접 입력으로 적는다
   expect(db.books[0]?.category).toBe('소설');
 
   // 고칠 때 목록에 없는 분야는 직접 입력으로 열린다
-  await page.getByRole('button', { name: /^직접 고른 분야,/ }).click();
+  await openEdit(page, /^직접 고른 분야,/);
   const edit = page.getByRole('dialog', { name: '기록 고치기' });
   await expect(edit.getByLabel('분야', { exact: true })).toHaveValue('__custom__');
   await expect(edit.getByRole('textbox', { name: '분야 직접 입력' })).toHaveValue('소설');
@@ -253,7 +263,7 @@ test('분야는 목록에서 고르거나, 맨 위 직접 입력으로 적는다
 
 test('읽는 중으로 바꾼 책은 맨 위 읽는 중 선반에, 중단한 책은 맨 아래에 있다', async ({ page }) => {
   const db = await loginAs(page, '#/', seed({ [year]: 2 }));
-  await page.getByRole('button', { name: new RegExp(`^${year}년의 책 1,`) }).click();
+  await openEdit(page, new RegExp(`^${year}년의 책 1,`));
   const dialog = page.getByRole('dialog', { name: '기록 고치기' });
   await dialog.getByLabel('상태', { exact: true }).selectOption('reading');
   await dialog.getByRole('button', { name: '고친 내용 저장' }).click();
@@ -271,7 +281,7 @@ test('읽는 중으로 바꾼 책은 맨 위 읽는 중 선반에, 중단한 책
   // 첫 선반이 읽는 중
   await expect(page.locator('.shelf-wrap').first()).toHaveAttribute('id', 'shelf-reading');
 
-  await page.getByRole('button', { name: new RegExp(`^${year}년의 책 2,`) }).click();
+  await openEdit(page, new RegExp(`^${year}년의 책 2,`));
   await dialog.getByLabel('상태', { exact: true }).selectOption('dropped');
   await dialog.getByRole('button', { name: '고친 내용 저장' }).click();
   await expect(page.locator('.shelf-wrap').last()).toHaveAttribute('id', 'shelf-dropped');
