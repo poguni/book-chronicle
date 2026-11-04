@@ -3,12 +3,15 @@
 
   // 월별 막대 12칸 (DESIGN 7.3): 현재 달 강조색, 아직 오지 않은 달 --bar-off
   let { bars, label }: { bars: MonthBar[]; label: string } = $props();
+
+  // 시안은 한 권에 26px. 한 달에 많이 읽어도 칸(64px)을 넘지 않게 가장 많은 달에 맞춥니다.
+  const unit = $derived(Math.min(26, 64 / Math.max(1, ...bars.map((b) => b.count))));
 </script>
 
 <div class="months" role="img" aria-label={label}>
   {#each bars as bar (bar.month)}
     <div>
-      <i class={bar.state} style:height="{bar.count ? bar.count * 26 : 3}px"></i>
+      <i class={bar.state} style:height="{bar.count ? Math.max(4, bar.count * unit) : 3}px"></i>
       <span>{bar.month}</span>
     </div>
   {/each}

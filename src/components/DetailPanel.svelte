@@ -1,16 +1,26 @@
 <script lang="ts">
-  import { monthBars } from '../lib/format';
+  import { formatNumber, monthBars } from '../lib/format';
   import { ko } from '../lib/i18n/ko';
+  import type { ShelfSpine } from '../lib/shelves';
+  import { averageRating, monthCounts, topCategory } from '../lib/stats';
   import EmptyState from './EmptyState.svelte';
   import Icon from './Icon.svelte';
   import MonthBars from './MonthBars.svelte';
 
-  // 상세 패널 (DESIGN 7.3). Phase 3에서는 빈 상태만 그립니다.
-  // 선택한 책·통계·나이테는 Phase 4·6에서 채웁니다. "한눈에"는 올해 고정입니다(결정 0001-9).
-  let { today, open, onclose }: { today: Date; open: boolean; onclose: () => void } = $props();
+  // 상세 패널 (DESIGN 7.3). 선택한 책과 올해의 나이테는 Phase 6에서 채웁니다.
+  // "한눈에"는 올해 고정입니다(결정 0001-9). spines는 올해 책장의 책등입니다.
+  let {
+    today,
+    spines,
+    open,
+    onclose,
+  }: { today: Date; spines: ShelfSpine[]; open: boolean; onclose: () => void } = $props();
 
   const year = $derived(today.getFullYear());
-  const bars = $derived(monthBars([], year, today));
+  const bars = $derived(monthBars(monthCounts(spines), year, today));
+  const pages = $derived(spines.reduce((sum, s) => sum + (s.knownPages ?? 0), 0));
+  const rating = $derived(averageRating(spines));
+  const top = $derived(topCategory(spines));
 </script>
 
 <aside class="detail" class:open aria-label={ko.detail.label}>
@@ -29,10 +39,18 @@
       <a href="#/compare">{ko.detail.toCompare}</a>
     </div>
     <div class="stats">
-      <div class="stat"><span>{ko.detail.statBooks}</span><b>0{ko.top.books}</b></div>
-      <div class="stat"><span>{ko.detail.statPages}</span><b>0</b></div>
-      <div class="stat"><span>{ko.detail.statRating}</span><b>{ko.detail.none}</b></div>
-      <div class="stat"><span>{ko.detail.statTop}</span><b>{ko.detail.none}</b></div>
+      <div class="stat">
+        <span>{ko.detail.statBooks}</span><b>{formatNumber(spines.length)}{ko.top.books}</b>
+      </div>
+      <div class="stat"><span>{ko.detail.statPages}</span><b>{formatNumber(pages)}</b></div>
+      <div class="stat">
+        <span>{ko.detail.statRating}</span><b
+          >{rating === null ? ko.detail.none : rating.toFixed(1)}</b
+        >
+      </div>
+      <div class="stat">
+        <span>{ko.detail.statTop}</span><b class="top">{top ?? ko.detail.none}</b>
+      </div>
     </div>
     <MonthBars {bars} label={ko.detail.monthsLabel(year)} />
   </section>
@@ -106,6 +124,13 @@
     font-family: var(--font-display);
     font-size: 24px;
     line-height: 1.3;
+  }
+  .stat b.top {
+    font-size: 18px;
+    line-height: 1.75;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   /* 900~1199px: 오른쪽에서 밀려 나오는 서랍 (DESIGN 5.2) */

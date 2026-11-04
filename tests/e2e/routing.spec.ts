@@ -5,7 +5,7 @@ import {
   fillLogin,
   horizontalOverflow,
   openMenuIfCollapsed,
-} from './helpers';
+} from './helpers.ts';
 
 test('로그인하지 않으면 어느 주소든 로그인 화면이 보이고 주소는 그대로다', async ({ page }) => {
   await page.goto('./#/compare');

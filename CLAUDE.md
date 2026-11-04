@@ -113,7 +113,7 @@ supabase/functions/bookchronicle-aladin/  알라딘 프록시
 
 ## 9. Git 규칙
 - 기본 브랜치는 `main`이며, `main`에 올라가면 GitHub Actions가 GitHub Pages로 배포합니다.
-- 기능 작업은 `phase-N/기능-이름` 브랜치에서 합니다.
+- 별도 브랜치를 만들지 않고 `main`에 바로 커밋합니다(2026-11-04 앱 주인 결정). 그래서 커밋 전에 `npm run check`·`lint`·`test`가 **종료 코드 0**인지 꼭 확인합니다(실패하면 배포가 멈춤).
 - 커밋 메시지는 한국어로, 무엇을 왜 바꿨는지 한 줄 요약 + 필요하면 본문.
 - 사용자가 요청할 때만 push·PR을 만듭니다.
 

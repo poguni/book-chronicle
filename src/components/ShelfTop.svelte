@@ -1,16 +1,7 @@
-<script lang="ts" module>
-  export type SortKey = 'date' | 'color' | 'category';
-  /** 올해 요약 (DESIGN 7.2). 값이 없으면 null */
-  export type YearSummary = {
-    books: number;
-    pages: number;
-    averageRating: number | null;
-    diffFromLastYear: number | null;
-  };
-</script>
-
 <script lang="ts">
   import { formatNumber } from '../lib/format';
+  import type { SortKey } from '../lib/shelves';
+  import type { YearSummary } from '../lib/stats';
   import { ko } from '../lib/i18n/ko';
   import Icon from './Icon.svelte';
 

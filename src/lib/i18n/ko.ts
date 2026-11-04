@@ -54,6 +54,86 @@ export const ko = {
   shelf: {
     meta: (count: number, pages: string) => `${count}권 · ${pages}쪽`,
     empty: '이 해의 첫 책을 꽂아 볼까요?',
+    unknownYear: '연도 미상',
+    unknownYearHint: '완독일을 넣으면 그해 책장으로 옮겨 가요.',
+    bookOfYear: (title: string) => `그해의 책 · ${title}`,
+    loadError: '책장을 불러오지 못했어요. 연결을 확인한 뒤 다시 시도해 주세요.',
+    retry: '다시 불러오기',
+  },
+  book: {
+    /** 책등 aria-label: 제목, 저자, 쪽수, 완독 연월, (그해의 책) — DESIGN 9장 */
+    label: (p: {
+      title: string;
+      author: string | null;
+      pages: number;
+      estimated: boolean;
+      finished: string | null;
+      bookOfYear: boolean;
+    }) =>
+      [
+        p.title,
+        p.author,
+        p.estimated ? `쪽수 모름(약 ${p.pages}쪽으로 표시)` : `${p.pages}쪽`,
+        p.finished ? `${p.finished} 완독` : '완독일 모름',
+        p.bookOfYear ? '그해의 책' : null,
+      ]
+        .filter(Boolean)
+        .join(', '),
+    finishedMonth: (date: string) => `${date.slice(0, 4)}년 ${Number(date.slice(5, 7))}월`,
+  },
+  form: {
+    titleNew: '책 한 권 꽂기',
+    titleEdit: '기록 고치기',
+    titleReread: '다시 읽은 기록 더하기',
+    close: '닫기',
+    bookSection: '책 정보',
+    readingSection: '독서 기록',
+    spineSection: '책등',
+    title: '제목',
+    author: '저자',
+    publisher: '출판사',
+    pages: '쪽수',
+    pagesHint: '모르면 비워 두세요. 분야 평균으로 그려요.',
+    category: '분야',
+    categoryPlaceholder: '예: 소설/시/희곡',
+    status: '상태',
+    statusFinished: '완독',
+    statusReading: '읽는 중',
+    statusDropped: '중단',
+    finishedAt: '완독일',
+    finishedAtHint: '비워 두면 "연도 미상" 칸에 꽂혀요.',
+    rating: '별점',
+    ratingNone: '별점 없음',
+    ratingValue: (n: number) => `${n}점`,
+    note: '한 줄 메모',
+    notePlaceholder: '이 책을 덮으며 떠오른 문장',
+    base: '바탕색',
+    band: '띠색',
+    accent: '강조색',
+    pattern: '책등 무늬',
+    patternAuto: '분야에 맞춰',
+    patternHardcover: '하드커버',
+    patternPaperback: '페이퍼백',
+    patternLabel: '라벨형',
+    preview: '책등 미리 보기',
+    submitYear: (year: number) => `${year}년 책장에 꽂기`,
+    submitUnknown: '연도 미상 칸에 꽂기',
+    submitRecord: '기록 저장',
+    submitEdit: '고친 내용 저장',
+    saving: '저장하는 중…',
+    cancel: '그만두기',
+    reread: '다시 읽은 기록 더하기',
+    deleteBook: '이 책 지우기',
+    deleteReading: '이 기록만 지우기',
+    confirmDeleteBook: '책과 기록을 모두 지울까요? 되돌릴 수 없어요.',
+    confirmDeleteReading: '이 독서 기록을 지울까요? 책과 다른 기록은 남아요.',
+    confirmYes: '네, 지울게요',
+    errorTitle: '제목을 적어 주세요',
+    errorTitleLong: '제목은 500자까지 적을 수 있어요',
+    errorPages: '쪽수는 1 이상의 숫자로 적어 주세요',
+    errorDate: '날짜를 다시 확인해 주세요',
+    errorRating: '별점을 다시 골라 주세요',
+    errorSave: '저장하지 못했어요. 입력한 내용은 그대로 있으니 다시 시도해 주세요.',
   },
   detail: {
     label: '선택한 책과 올해 요약',

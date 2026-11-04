@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { horizontalOverflow, loginAs, openMenuIfCollapsed } from './helpers';
+import { horizontalOverflow, loginAs, openMenuIfCollapsed } from './helpers.ts';
 
 const year = String(new Date().getFullYear());
 

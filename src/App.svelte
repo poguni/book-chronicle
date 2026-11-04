@@ -1,11 +1,13 @@
 <script lang="ts">
-  import { tick } from 'svelte';
+  import { tick, untrack } from 'svelte';
+  import BookDialog, { type DialogMode } from './components/BookDialog.svelte';
   import DetailPanel from './components/DetailPanel.svelte';
   import OfflineBanner from './components/OfflineBanner.svelte';
-  import Sidebar, { type YearBand } from './components/Sidebar.svelte';
+  import Sidebar from './components/Sidebar.svelte';
   import { auth } from './lib/auth.svelte';
   import { ensureSettings } from './lib/data/settings';
   import { ko } from './lib/i18n/ko';
+  import { library } from './lib/library.svelte';
   import { router } from './lib/router.svelte';
   import { status } from './lib/status.svelte';
   import { isSupabaseConfigured } from './lib/supabase';
@@ -16,23 +18,37 @@
   import Recap from './pages/Recap.svelte';
   import Settings from './pages/Settings.svelte';
   import Shelves from './pages/Shelves.svelte';
+  import type { ShelfSpine } from './lib/shelves';
+  import { shelfOf, yearBands } from './lib/stats';
 
   const today = new Date();
   const currentYear = today.getFullYear();
-  // 책 데이터는 Phase 4에서 불러옵니다. 올해는 책이 없어도 늘 보입니다(결정 0001-8).
-  const years: YearBand[] = [{ year: currentYear, count: 0, segments: [] }];
+  const years = $derived(yearBands(library.shelves));
+  const thisYearSpines = $derived(shelfOf(library.shelves, currentYear)?.spines ?? []);
+
+  // 책 꽂기·고치기 대화 상자. key를 바꾸면 새 값으로 다시 엽니다.
+  let dialog = $state<{ mode: DialogMode; key: number } | null>(null);
+  let dialogKey = 0;
+  function openDialog(mode: DialogMode) {
+    dialog = { mode, key: ++dialogKey };
+  }
 
   // 900~1199px에서 상세 패널 서랍이 열렸는지 (책을 누르면 열림 — Phase 6)
   let detailOpen = $state(false);
   const withDetail = $derived(router.route.name === 'shelves');
 
-  // 첫 로그인 때 settings 행 만들기 (이미 있으면 그대로)
+  // 로그인하면 settings 행을 만들고(이미 있으면 그대로) 책장을 불러옵니다. 로그아웃하면 비웁니다.
   $effect(() => {
     const userId = auth.userId;
     if (userId) {
       ensureSettings(userId).catch((e: unknown) =>
         console.warn('settings 행을 만들지 못했어요', e),
       );
+      // 이 효과는 로그인한 사용자가 바뀔 때만 다시 돌도록, 책장 상태는 추적하지 않습니다.
+      untrack(() => void library.load());
+    } else {
+      untrack(() => library.reset());
+      dialog = null;
     }
   });
 
@@ -42,7 +58,12 @@
   });
 
   function addBook() {
-    // 책 꽂기 대화 상자는 Phase 4에서 만듭니다.
+    openDialog({ kind: 'new' });
+  }
+
+  // 꺼내 보기·상세 패널(Phase 6) 전까지는 책등을 누르면 고치기 대화 상자를 엽니다.
+  function pick(spine: ShelfSpine) {
+    openDialog({ kind: 'edit', bookId: spine.bookId, readingId: spine.readingId });
   }
 
   /** 연도 나이테를 누르면 주소는 그대로 두고 그 연도 책장으로 스크롤만 합니다(결정 0001-12). */
@@ -99,14 +120,32 @@
       {:else if router.route.name === 'settings'}
         <Settings />
       {:else}
-        <Shelves {today} onaddbook={addBook} />
+        <Shelves
+          {today}
+          shelves={library.shelves}
+          loadState={library.state}
+          onaddbook={addBook}
+          onpick={pick}
+          onretry={() => library.load()}
+        />
       {/if}
     </main>
 
     {#if withDetail}
-      <DetailPanel {today} open={detailOpen} onclose={() => (detailOpen = false)} />
+      <DetailPanel
+        {today}
+        spines={thisYearSpines}
+        open={detailOpen}
+        onclose={() => (detailOpen = false)}
+      />
     {/if}
   </div>
+
+  {#if dialog}
+    {#key dialog.key}
+      <BookDialog mode={dialog.mode} onclose={() => (dialog = null)} onchangemode={openDialog} />
+    {/key}
+  {/if}
 {/if}
 
 <style>

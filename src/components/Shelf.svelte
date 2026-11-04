@@ -1,26 +1,100 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
+  import type { Attachment } from 'svelte/attachments';
   import { formatNumber } from '../lib/format';
   import { ko } from '../lib/i18n/ko';
+  import type { ShelfSpine } from '../lib/shelves';
+  import { packRows, spineWidthPx, TITLE_MIN_PX } from '../lib/spine/geometry';
+  import Book from './Book.svelte';
 
-  // 한 연도 = 머리글 + 책장 + 선반 판 (DESIGN 6.1). 책등은 Phase 4에서 children으로 넣습니다.
+  // 한 연도 = 머리글 + 책장 + 선반 판 (DESIGN 6.1).
+  // 선반 폭을 넘으면 다음 줄로 넘기고 줄마다 선반 판을 그립니다(결정 0001-4).
   let {
     year,
     count,
     pages,
-    children,
-  }: { year: number; count: number; pages: number; children: Snippet } = $props();
+    bookOfYearTitle = null,
+    spines = [],
+    onpick,
+    empty,
+  }: {
+    year: number | null;
+    count: number;
+    pages: number;
+    bookOfYearTitle?: string | null;
+    spines?: ShelfSpine[];
+    onpick?: (spine: ShelfSpine) => void;
+    /** 책이 없을 때 보여 줄 내용 */
+    empty?: Snippet;
+  } = $props();
+
+  const id = $derived(year === null ? 'y-unknown' : `y${year}`);
+  const title = $derived(year === null ? ko.shelf.unknownYear : String(year));
+
+  // 책장 안쪽 폭(px). cqw와 같은 기준(책장 내용 상자)으로 재서 줄 나눔·제목 숨김을 계산합니다.
+  let width = $state(0);
+  const measure: Attachment<HTMLElement> = (el) => {
+    const ro = new ResizeObserver(([entry]) => {
+      if (entry) width = entry.contentRect.width;
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  };
+
+  const widths = $derived(spines.map((s) => spineWidthPx(s.pages, width)));
+  const rows = $derived(packRows(widths, width));
+
+  /** 키보드 ←→로 이웃 책등으로 (DESIGN 8장). 줄이 바뀌어도 이어서 움직입니다. */
+  function onkeydown(e: KeyboardEvent) {
+    if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+    const target = e.target as HTMLElement;
+    if (!target.classList.contains('book')) return;
+    const books = [...(e.currentTarget as HTMLElement).querySelectorAll<HTMLElement>('.book')];
+    const next = books[books.indexOf(target) + (e.key === 'ArrowRight' ? 1 : -1)];
+    if (next) {
+      next.focus();
+      e.preventDefault();
+    }
+  }
 </script>
 
-<section class="shelf-wrap" id="y{year}" aria-labelledby="y{year}-title">
+<section class="shelf-wrap" {id} aria-labelledby="{id}-title">
   <div class="shelf-head">
-    <h2 class="display" id="y{year}-title">{year}</h2>
+    <h2 class="display" id="{id}-title">{title}</h2>
     <span class="meta">{ko.shelf.meta(count, formatNumber(pages))}</span>
+    {#if year === null}<span class="meta">{ko.shelf.unknownYearHint}</span>{/if}
+    {#if bookOfYearTitle}
+      <span class="boy">
+        <svg width="11" height="14" viewBox="0 0 12 14" fill="currentColor" aria-hidden="true">
+          <path d="M1 0h10v14L6 10.5 1 14z" />
+        </svg>
+        {ko.shelf.bookOfYear(bookOfYearTitle)}
+      </span>
+    {/if}
   </div>
-  <div class="shelf">
-    {@render children()}
+
+  <!-- svelte-ignore a11y_no_static_element_interactions -->
+  <div class="rows" {onkeydown}>
+    {#each rows as row, r (r)}
+      <div class="row">
+        <div class="shelf" {@attach measure}>
+          {#if spines.length === 0}
+            {@render empty?.()}
+          {:else}
+            {#each row as i (spines[i]?.readingId)}
+              {@const s = spines[i]!}
+              <Book
+                spine={s}
+                showTitle={width === 0 || (widths[i] ?? 0) >= TITLE_MIN_PX}
+                onclick={() => onpick?.(s)}
+              />
+            {/each}
+          {/if}
+        </div>
+        <div class="plank" aria-hidden="true"></div>
+      </div>
+    {/each}
   </div>
-  <div class="plank" aria-hidden="true"></div>
 </section>
 
 <style>
@@ -41,9 +115,27 @@
     margin: 0;
     font-size: 24px;
   }
-  .shelf-head .meta {
+  .meta {
     font-size: 13px;
     color: var(--muted);
+  }
+  .boy {
+    margin-left: auto;
+    font-size: 12px;
+    color: var(--accent);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .rows {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+  .row {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
   }
   .shelf {
     container-type: inline-size;
