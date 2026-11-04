@@ -27,3 +27,11 @@ export async function deleteReading(id: string): Promise<void> {
   const { error } = await supabase.from('readings').delete().eq('id', id);
   if (error) throw error;
 }
+
+/** 여러 기록을 한 번에 (CSV 가져오기·복원). 100개씩 */
+export async function insertReadings(readings: Omit<ReadingInsert, 'year'>[]): Promise<void> {
+  for (let i = 0; i < readings.length; i += 100) {
+    const { error } = await supabase.from('readings').insert(readings.slice(i, i + 100));
+    if (error) throw error;
+  }
+}

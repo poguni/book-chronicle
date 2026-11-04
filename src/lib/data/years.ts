@@ -15,3 +15,18 @@ export async function setBookOfYear(year: number, bookIds: string[]): Promise<vo
     .upsert({ year, book_of_year: bookIds }, { onConflict: 'user_id,year' });
   if (error) throw error;
 }
+
+/** 복원: 연도 회고 여러 개를 넣거나 고칩니다. */
+export async function upsertYears(
+  years: { year: number; book_of_year: string[]; one_liner: string | null }[],
+): Promise<void> {
+  if (years.length === 0) return;
+  const { error } = await supabase.from('years').upsert(years, { onConflict: 'user_id,year' });
+  if (error) throw error;
+}
+
+/** 복원의 덮어쓰기: 내 연도 회고를 모두 지웁니다(RLS로 본인 행만). */
+export async function deleteAllYears(): Promise<void> {
+  const { error } = await supabase.from('years').delete().not('year', 'is', null);
+  if (error) throw error;
+}

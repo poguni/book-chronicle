@@ -58,6 +58,8 @@ class Library {
   readings = $state.raw<ReadingRow[]>([]);
   years = $state.raw<YearRow[]>([]);
   patternMap = $state.raw<Record<string, Pattern>>({});
+  /** 마지막으로 JSON 백업을 받은 시각 (30일 알림, PRD F9) */
+  lastBackupAt = $state<string | null>(null);
   state = $state<LoadState>('idle');
   currentYear = new Date().getFullYear();
 
@@ -91,6 +93,7 @@ class Library {
       this.readings = readings;
       this.years = years;
       this.patternMap = parsePatternMap(settings?.pattern_map);
+      this.lastBackupAt = settings?.last_backup_at ?? null;
       this.state = 'ready';
     } catch (e) {
       console.warn('책장을 불러오지 못했어요', e);
@@ -103,6 +106,7 @@ class Library {
     this.readings = [];
     this.years = [];
     this.patternMap = {};
+    this.lastBackupAt = null;
     this.state = 'idle';
   }
 

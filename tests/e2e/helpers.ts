@@ -35,15 +35,33 @@ export type FakeDb = { books: Row[]; readings: Row[]; years: Row[]; settings: Ro
 
 const USER_ID = '00000000-0000-4000-8000-000000000001';
 
-/** 주소의 id=eq.값 조건 */
-function idFilter(url: URL): string | null {
-  const v = url.searchParams.get('id');
-  return v?.startsWith('eq.') ? v.slice(3) : null;
+const NOT_FILTERS = new Set(['select', 'order', 'limit', 'offset', 'on_conflict', 'columns']);
+
+/** 주소의 PostgREST 조건(eq, in, is.null, not.is.null)에 맞는 행인지 */
+function matches(row: Row, url: URL): boolean {
+  for (const [col, cond] of url.searchParams) {
+    if (NOT_FILTERS.has(col)) continue;
+    const v = row[col];
+    if (cond.startsWith('eq.')) {
+      if (String(v) !== cond.slice(3)) return false;
+    } else if (cond.startsWith('in.(')) {
+      const list = cond
+        .slice(4, -1)
+        .split(',')
+        .map((x) => x.replace(/^"|"$/g, ''));
+      if (!list.includes(String(v))) return false;
+    } else if (cond === 'not.is.null') {
+      if (v === null || v === undefined) return false;
+    } else if (cond === 'is.null') {
+      if (v !== null && v !== undefined) return false;
+    }
+  }
+  return true;
 }
 
 /**
  * bookchronicle 테이블을 흉내 내는 아주 작은 가짜 PostgREST.
- * GET은 전부, POST는 추가, PATCH·DELETE는 id=eq. 조건만 처리합니다. 책을 지우면 기록도 지웁니다.
+ * GET은 전부, POST는 추가(years는 upsert), PATCH·DELETE는 eq·in·is.null 조건을 처리합니다. 책을 지우면 기록도 지웁니다.
  */
 export async function fakeDb(page: Page, seed: Partial<FakeDb> = {}): Promise<FakeDb> {
   const db: FakeDb = { books: [], readings: [], years: [], settings: [], ...seed };
@@ -54,7 +72,6 @@ export async function fakeDb(page: Page, seed: Partial<FakeDb> = {}): Promise<Fa
     const req = route.request();
     const url = new URL(req.url());
     const rows = db[table];
-    const id = idFilter(url);
     const json = (status: number, body: unknown) =>
       route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
 
@@ -84,7 +101,7 @@ export async function fakeDb(page: Page, seed: Partial<FakeDb> = {}): Promise<Fa
     if (req.method() === 'PATCH') {
       const patch = req.postDataJSON() as Row;
       for (const r of rows) {
-        if (r.id !== id) continue;
+        if (!matches(r, url)) continue;
         Object.assign(r, patch, { updated_at: now() });
         if (table === 'readings')
           r.year = typeof r.finished_at === 'string' ? Number(r.finished_at.slice(0, 4)) : null;
@@ -92,8 +109,12 @@ export async function fakeDb(page: Page, seed: Partial<FakeDb> = {}): Promise<Fa
       return route.fulfill({ status: 204, body: '' });
     }
     if (req.method() === 'DELETE') {
-      db[table] = rows.filter((r) => r.id !== id);
-      if (table === 'books') db.readings = db.readings.filter((r) => r.book_id !== id);
+      const gone = rows.filter((r) => matches(r, url));
+      db[table] = rows.filter((r) => !gone.includes(r));
+      if (table === 'books') {
+        const ids = new Set(gone.map((r) => r.id));
+        db.readings = db.readings.filter((r) => !ids.has(r.book_id));
+      }
       return route.fulfill({ status: 204, body: '' });
     }
     return route.fallback();

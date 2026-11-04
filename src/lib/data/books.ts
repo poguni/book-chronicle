@@ -41,3 +41,36 @@ export async function deleteBook(
     if (storageError) console.warn('표지 파일을 지우지 못했어요', storageError);
   }
 }
+
+const CHUNK = 100;
+
+/** 여러 권을 한 번에 (CSV 가져오기·복원). 100권씩 나눠 보냅니다. */
+export async function insertBooks(books: BookInsert[]): Promise<void> {
+  for (let i = 0; i < books.length; i += CHUNK) {
+    const { error } = await supabase.from('books').insert(books.slice(i, i + CHUNK));
+    if (error) throw error;
+  }
+}
+
+/**
+ * 내 책을 모두 지웁니다(복원의 덮어쓰기). 기록은 외래 키로 함께 지워집니다.
+ * RLS가 본인 행만 허용하므로 다른 사용자의 행에는 닿지 않습니다. Storage 파일은 부르는 쪽이 정리합니다.
+ */
+export async function deleteAllBooks(): Promise<void> {
+  const { error } = await supabase.from('books').delete().not('id', 'is', null);
+  if (error) throw error;
+}
+
+/** Storage 파일 여러 개 지우기(실패해도 책장에는 영향 없음) */
+export async function removeFiles(paths: string[]): Promise<void> {
+  if (paths.length === 0) return;
+  const { error } = await supabase.storage.from(COVER_BUCKET).remove(paths);
+  if (error) console.warn('파일을 지우지 못했어요', error);
+}
+
+/** 방금 넣은 책들을 되돌릴 때 (가져오기 중 기록 저장 실패) */
+export async function deleteBooksByIds(ids: string[]): Promise<void> {
+  if (ids.length === 0) return;
+  const { error } = await supabase.from('books').delete().in('id', ids);
+  if (error) throw error;
+}

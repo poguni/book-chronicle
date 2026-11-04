@@ -235,6 +235,156 @@ export const ko = {
   },
   recapOfYear: (year: number) => `${year}년 연말 회고`,
   placeholder: '이 화면은 곧 채워질 예정이에요.',
+  csv: {
+    title: 'CSV로 한꺼번에 가져오기',
+    intro:
+      '엑셀이나 다른 앱에서 내보낸 CSV 파일의 책을 한꺼번에 꽂아요. 한글 엑셀 파일(CP949)도 읽을 수 있어요.',
+    pick: 'CSV 파일 고르기',
+    readError: '파일을 읽지 못했어요. CSV 파일인지 확인해 주세요.',
+    empty: '읽을 줄이 없어요. 첫 줄은 열 이름이어야 해요.',
+    encoding: '글자 인코딩',
+    encodingHint: '아래 미리 보기의 한글이 깨져 보이면 바꿔 주세요.',
+    utf8: 'UTF-8',
+    cp949: 'CP949 (한글 엑셀)',
+    sample: '파일 앞부분',
+    mapping: '열 맞추기',
+    mappingHint: '각 항목에 맞는 CSV 열을 골라 주세요. 비슷한 이름은 미리 맞춰 두었어요.',
+    none: '(없음)',
+    required: '제목 열은 꼭 골라 주세요.',
+    goodreads:
+      'Goodreads 내보내기 파일이에요. 별점 0은 별점 없음으로, 읽고 싶은 책(to-read)은 빼고 가져와요.',
+    fields: {
+      title: '제목',
+      author: '저자',
+      isbn: 'ISBN',
+      publisher: '출판사',
+      pages: '쪽수',
+      finishedAt: '완독일',
+      rating: '별점',
+      note: '메모',
+      category: '분야',
+      status: '상태',
+    },
+    rowsInfo: (n: number, skipped: number) =>
+      skipped > 0
+        ? `${n}줄을 읽었어요. 제목이 없거나 읽지 않은 책 ${skipped}줄은 빼요.`
+        : `${n}줄을 읽었어요.`,
+    toLookup: '도서 정보 보충하기',
+    lookupHint:
+      'ISBN이나 제목·저자로 쪽수·표지·분야를 찾아 빈 칸을 채워요. 200권이면 2~3분쯤 걸려요.',
+    skipLookup: '보충 없이 미리 보기',
+    back: '이전으로',
+    lookingUp: (done: number, total: number) => `도서 정보를 찾는 중… ${done} / ${total}`,
+    stop: '멈추기',
+    stopped: '멈췄어요. 찾은 데까지만 보충했어요.',
+    preview: '미리 보기',
+    summary: (p: {
+      total: number;
+      enriched: number;
+      candidates: number;
+      notfound: number;
+      duplicates: number;
+    }) =>
+      [
+        `${p.total}줄`,
+        p.enriched ? `보충됨 ${p.enriched}` : null,
+        p.candidates ? `후보 여러 개 ${p.candidates}` : null,
+        p.notfound ? `찾지 못함 ${p.notfound}` : null,
+        p.duplicates ? `이미 있는 책 ${p.duplicates}` : null,
+      ]
+        .filter(Boolean)
+        .join(' · '),
+    state: {
+      ok: '정상',
+      enriched: '정보 보충됨',
+      candidates: '후보 여러 개',
+      notfound: '찾지 못함',
+      error: '조회 실패',
+    },
+    problems: {
+      date: '날짜를 읽지 못함',
+      rating: '별점을 읽지 못함',
+      pages: '쪽수를 읽지 못함',
+      isbn: 'ISBN이 올바르지 않음',
+    },
+    includeCol: '가져오기',
+    include: (line: number) => `${line}번째 줄 가져오기`,
+    line: '줄',
+    book: '책',
+    finished: '완독일',
+    rating: '별점',
+    status: '상태',
+    choose: '후보 고르기',
+    chooseNone: '고르지 않음(CSV 값만)',
+    candidate: (c: {
+      title: string;
+      author: string | null;
+      publisher: string | null;
+      pubDate: string | null;
+    }) => [c.title, c.author, c.publisher, c.pubDate?.slice(0, 4)].filter(Boolean).join(' · '),
+    duplicate: (title: string) => `이미 있는 책: ${title}`,
+    dupAction: '중복 처리',
+    dupAll: '중복 책 한꺼번에',
+    dup: { skip: '건너뛰기', addReading: '독서 기록만 추가', overwrite: '덮어쓰기' },
+    reading: '읽는 중',
+    dropped: '중단',
+    covers: '표지도 가져오기 (책등 색을 표지에서 뽑아요)',
+    run: (n: number) => `${n}줄 가져오기`,
+    nothing: '가져올 줄이 없어요.',
+    savingCovers: (done: number, total: number) => `표지를 가져오는 중… ${done} / ${total}`,
+    saving: '책장에 꽂는 중…',
+    done: (p: { books: number; readings: number; updated: number }) =>
+      `새 책 ${p.books}권과 독서 기록 ${p.readings}개를 꽂았어요.` +
+      (p.updated ? ` 이미 있던 책 ${p.updated}권은 CSV 내용으로 고쳤어요.` : ''),
+    coverFailed: (n: number) => `표지 ${n}개는 가져오지 못해 기본 색으로 칠했어요.`,
+    failed: '가져오지 못했어요. 연결을 확인하고 다시 시도해 주세요. 책장은 그대로예요.',
+    toShelf: '책장 보기',
+    again: '다른 파일 가져오기',
+  },
+  backup: {
+    title: '백업과 내보내기',
+    intro: '책장은 Supabase에 저장되지만, 만일을 위해 내 컴퓨터에도 백업 파일을 받아 두세요.',
+    last: (date: string | null) =>
+      date ? `마지막 백업: ${date}` : '아직 백업 파일을 받은 적이 없어요.',
+    withCovers: '표지 그림도 넣기 (파일이 커져요)',
+    download: 'JSON 백업 받기',
+    downloading: (done: number, total: number) =>
+      total > 0 ? `표지를 담는 중… ${done} / ${total}` : '백업 파일을 만드는 중…',
+    downloaded: '백업 파일을 받았어요.',
+    downloadFailed: '백업 파일을 만들지 못했어요. 잠시 뒤 다시 시도해 주세요.',
+    csv: 'CSV로 내보내기 (엑셀)',
+    csvHint: '독서 기록 한 줄에 한 권씩. 내보낸 파일은 위의 CSV 가져오기로 다시 가져올 수 있어요.',
+    restoreTitle: '백업에서 복원',
+    restorePick: '백업 파일(JSON) 고르기',
+    mode: '복원 방식',
+    merge: '합치기',
+    mergeHint: '지금 책장은 그대로 두고, 백업에만 있는 책과 기록을 더해요.',
+    overwrite: '덮어쓰기',
+    overwriteHint: '지금 책장을 모두 지우고 백업 내용으로 바꿔요.',
+    fileInfo: (p: { date: string; books: number; readings: number; covers: number }) =>
+      `${p.date}에 만든 백업 · 책 ${p.books}권 · 기록 ${p.readings}개` +
+      (p.covers ? ` · 표지 ${p.covers}개` : ''),
+    planMerge: (p: { books: number; readings: number; skipped: number }) =>
+      `책 ${p.books}권과 기록 ${p.readings}개를 더해요.` +
+      (p.skipped ? ` 이미 있는 책 ${p.skipped}권은 그대로 둬요.` : ''),
+    planOverwrite: (p: { current: number; books: number; readings: number }) =>
+      `지금 책장의 책 ${p.current}권이 모두 지워지고, 백업의 책 ${p.books}권과 기록 ${p.readings}개로 바뀌어요. 되돌릴 수 없으니 먼저 지금 책장을 백업해 두세요.`,
+    otherAccount: '다른 계정에서 만든 백업이에요. 표지 그림이 들어 있지 않으면 표지 없이 복원돼요.',
+    restore: '복원하기',
+    restoreConfirm: '네, 덮어쓸게요',
+    cancel: '취소',
+    restoring: '복원하는 중…',
+    restored: '복원했어요.',
+    restoreFailed: '복원하지 못했어요. 책장은 복원 전 상태로 되돌렸어요.',
+    errors: {
+      not_json: 'JSON 파일이 아니에요.',
+      not_backup: '북크로니클 백업 파일이 아니에요.',
+      too_new: '더 새 버전의 앱에서 만든 백업이에요. 앱을 새로 고친 뒤 다시 시도해 주세요.',
+    },
+    reminder: '마지막 백업 후 30일이 지났어요. 만일을 위해 백업 파일을 받아 둘까요?',
+    reminderGo: '백업하러 가기',
+    reminderLater: '나중에',
+  },
   settings: {
     motion: '움직임 줄이기',
     motionHint:
