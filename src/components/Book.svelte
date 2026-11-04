@@ -1,5 +1,7 @@
 <script lang="ts">
+  import type { Attachment } from 'svelte/attachments';
   import { covers } from '../lib/covers.svelte';
+  import { prefs } from '../lib/prefs.svelte';
   import { ko } from '../lib/i18n/ko';
   import type { ShelfSpine } from '../lib/shelves';
   import { inkFor } from '../lib/spine/color';
@@ -16,6 +18,8 @@
     dragging = false,
     describedby,
     selected,
+    dim = false,
+    lean = false,
   }: {
     spine: Pick<
       ShelfSpine,
@@ -29,7 +33,7 @@
       | 'status'
       | 'finishedAt'
       | 'isBookOfYear'
-    > & { coverPath?: string | null };
+    > & { coverPath?: string | null; texturePath?: string | null };
     /** 제목 글자 크기·줄 수 (fitTitle). null이면 제목을 그리지 않음 */
     fit: TitleFit | null;
     onclick?: () => void;
@@ -40,12 +44,39 @@
     describedby?: string;
     /** 꺼내 본 책이면 true. 책장 밖(미리 보기)에서는 undefined라 aria-pressed를 달지 않음 */
     selected?: boolean;
+    /** 강조 보기에서 흐리게 */
+    dim?: boolean;
+    /** 읽는 중: 선반에 비스듬히 기대어 놓음 (P1) */
+    lean?: boolean;
   } = $props();
 
   const fg = $derived(inkFor(spine.palette.base));
   const fgl = $derived(inkFor(spine.palette.band));
   // 표지 면: 꺼냈을 때만 실제 표지를 내려받고, 없으면 팔레트로 만든 간이 표지
   const coverUrl = $derived(selected && spine.coverPath ? covers.url(spine.coverPath) : null);
+  // 표지 질감 모드(PRD 6.5): 화면에 보이는 책만 질감 이미지를 내려받습니다(PRD 11장 성능).
+  let visible = $state(false);
+  const watch: Attachment<HTMLElement> = (el) => {
+    // 질감 모드이고 질감이 있는 책만 감시합니다(책 1,000권에서도 가볍게).
+    if (visible || prefs.spine !== 'texture' || !spine.texturePath) return;
+    if (typeof IntersectionObserver === 'undefined') return;
+    const io = new IntersectionObserver(
+      ([entry]) => {
+        if (entry?.isIntersecting) {
+          visible = true;
+          io.disconnect();
+        }
+      },
+      { rootMargin: '200px' },
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  };
+  const textureUrl = $derived(
+    prefs.spine === 'texture' && visible && spine.texturePath
+      ? covers.url(spine.texturePath)
+      : null,
+  );
   const art = $derived(
     coverUrl
       ? `center / cover no-repeat url("${coverUrl}")`
@@ -69,6 +100,8 @@
   class="book"
   class:estimated={spine.estimated}
   class:dragging
+  class:dim
+  class:lean
   data-id={dataId}
   style:--p={spine.pages}
   style:--hh={spine.height}
@@ -81,10 +114,12 @@
   aria-label={label}
   aria-describedby={describedby}
   aria-pressed={selected}
+  {@attach watch}
   {tabindex}
   {onclick}
 >
-  <span class="face spine pat-{spine.pattern}">
+  <span class="face spine pat-{spine.pattern}" class:textured={textureUrl}>
+    {#if textureUrl}<span class="tex" style:background-image={`url("${textureUrl}")`}></span>{/if}
     {#if fit}
       <span class="t" style:font-size="{fit.font}px" style:max-height="{fit.maxHeight}px"
         >{spine.title}</span
@@ -135,6 +170,25 @@
   .book[aria-pressed='true'] {
     transform: translateY(-14px) translateZ(36px) rotateY(-62deg);
     z-index: 5;
+  }
+  /* 강조 보기: 강조하지 않는 책은 흐리게 (PRD F4) */
+  .book.dim {
+    opacity: 0.28;
+    filter: saturate(0.4);
+  }
+  .book.dim:hover,
+  .book.dim:focus-visible {
+    opacity: 0.8;
+  }
+  /* 읽는 중: 비스듬히 기대어 놓은 모습 (PRD F4 P1). 꺼내면 바로 섬 */
+  .book.lean {
+    rotate: 7deg;
+    transform-origin: 0 100%;
+    margin-right: 10px;
+  }
+  .book.lean[aria-pressed='true'] {
+    rotate: 0deg;
+    transform-origin: 0 50%;
   }
   /* 끌어 옮기는 중인 책: 조금 들려 있고 반투명 */
   .book.dragging {
@@ -216,6 +270,28 @@
     white-space: nowrap;
     max-height: 22%;
     overflow: hidden;
+  }
+  /* 표지 질감 모드: 흐린 표지 위에 바탕색을 반쯤 덧칠해 제목이 읽히게 (PRD 6.5) */
+  .tex {
+    position: absolute;
+    inset: 0;
+    background-size: cover;
+    background-position: center;
+  }
+  .tex::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: var(--base);
+    opacity: 0.5;
+  }
+  .textured .t,
+  .textured .a {
+    position: relative;
+    z-index: 1;
+  }
+  .textured .mk {
+    z-index: 1;
   }
   /* 패턴 ① 하드커버: 위·아래 금박 띠 + 아래 표시 */
   .pat-hardcover {

@@ -28,6 +28,8 @@ export type ShelfSpine = {
   pattern: Pattern;
   /** Storage 표지 경로(없으면 null). 꺼내 보기 표지 면과 상세 패널에 씀 */
   coverPath: string | null;
+  /** 표지 질감 이미지 경로(표지 질감 모드) */
+  texturePath: string | null;
   status: ReadingStatus;
   finishedAt: string | null;
   rating: number | null;
@@ -133,6 +135,7 @@ export function buildShelves(
       palette: spine.palette,
       pattern: patternFor(spine.pattern, book.category, patternMap),
       coverPath: book.cover_path,
+      texturePath: book.texture_path,
       status,
       finishedAt: status === 'finished' ? r.finished_at : null,
       rating: r.rating === null ? null : Number(r.rating),
@@ -188,4 +191,25 @@ export function sortReadings(readings: readonly ReadingRow[]): ReadingRow[] {
     if (fa !== fb) return fa < fb ? -1 : 1;
     return a.created_at < b.created_at ? -1 : a.created_at > b.created_at ? 1 : 0;
   });
+}
+
+/** 강조 보기 (PRD F4): 별점 4.5 이상, 또는 한 분야만 진하게. 값은 '' | 'rating' | 'cat:분야' */
+export type Highlight =
+  { kind: 'none' } | { kind: 'rating' } | { kind: 'category'; category: string };
+
+export function parseHighlight(value: string): Highlight {
+  if (value === 'rating') return { kind: 'rating' };
+  if (value.startsWith('cat:') && value.length > 4)
+    return { kind: 'category', category: value.slice(4) };
+  return { kind: 'none' };
+}
+
+/** 강조할 책이면 true. 강조가 없으면 모두 true */
+export function matchesHighlight(
+  spine: Pick<ShelfSpine, 'rating' | 'category'>,
+  h: Highlight,
+): boolean {
+  if (h.kind === 'rating') return spine.rating !== null && spine.rating >= 4.5;
+  if (h.kind === 'category') return spine.category === h.category;
+  return true;
 }

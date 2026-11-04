@@ -3,6 +3,7 @@
   import { cleanAuthor, cleanTitle } from '../lib/bookMap';
   import { ko } from '../lib/i18n/ko';
   import { toIsbn13 } from '../lib/isbn';
+  import BarcodeScanner from './BarcodeScanner.svelte';
   import Icon from './Icon.svelte';
 
   // 도서 검색 (PRD F2, 카카오·국립중앙도서관 — 결정 0008): 제목·저자 검색 또는 ISBN 조회, 입력 후 300ms 기다렸다가 찾기, 최근 검색어 5개
@@ -83,6 +84,17 @@
     void run(q);
   }
 
+  // 바코드 스캔 (P1): 카메라를 쓸 수 있는 기기에서만 버튼을 보여 줍니다.
+  const canScan =
+    typeof navigator !== 'undefined' && typeof navigator.mediaDevices?.getUserMedia === 'function';
+  let scanning = $state(false);
+  function scanned(isbn: string) {
+    scanning = false;
+    query = isbn;
+    clearTimeout(timer);
+    void run(isbn);
+  }
+
   // Enter는 대화 상자 저장이 아니라 바로 찾기
   function onkeydown(e: KeyboardEvent) {
     if (e.key === 'Enter') {
@@ -108,7 +120,22 @@
       autocomplete="off"
       {autofocus}
     />
+    {#if canScan}
+      <button
+        type="button"
+        class="scan"
+        aria-label={ko.search.barcode}
+        aria-pressed={scanning}
+        onclick={() => (scanning = !scanning)}
+      >
+        <Icon name="barcode" strokeWidth={1.8} />
+      </button>
+    {/if}
   </label>
+
+  {#if scanning}
+    <BarcodeScanner onisbn={scanned} onclose={() => (scanning = false)} />
+  {/if}
 
   {#if query.trim() === '' && recent.length > 0}
     <div class="recent" role="group" aria-label={ko.search.recent}>
@@ -160,6 +187,23 @@
 </section>
 
 <style>
+  .scan {
+    flex: none;
+    width: 40px;
+    height: 40px;
+    margin-right: -8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 0;
+    border-radius: 10px;
+    background: none;
+    color: var(--muted);
+    cursor: pointer;
+  }
+  .scan[aria-pressed='true'] {
+    color: var(--accent);
+  }
   .search-box {
     display: flex;
     flex-direction: column;

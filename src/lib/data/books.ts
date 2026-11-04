@@ -74,3 +74,9 @@ export async function deleteBooksByIds(ids: string[]): Promise<void> {
   const { error } = await supabase.from('books').delete().in('id', ids);
   if (error) throw error;
 }
+
+/** 분야 이름 바꾸기·합치기: 이 분야의 책을 모두 새 이름으로 (같은 이름이 있으면 합쳐짐) */
+export async function renameCategory(from: string, to: string): Promise<void> {
+  const { error } = await supabase.from('books').update({ category: to }).eq('category', from);
+  if (error) throw error;
+}

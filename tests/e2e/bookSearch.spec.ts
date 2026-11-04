@@ -62,7 +62,13 @@ test('제목으로 찾아 고르면 칸이 채워지고, 표지 색으로 책등
     cover_path: `${OWNER}/covers/${String(book.id)}.jpg`,
   });
   expect((book.spine as { palette: { base: string } }).palette.base).toBe('#1F2340');
-  expect(api.uploads).toEqual([{ path: `${OWNER}/covers/${String(book.id)}.jpg`, jpeg: true }]);
+  // 표지(JPEG)와 표지 질감 이미지(PRD 6.5)를 함께 올림
+  expect(api.uploads.map((u) => u.path)).toEqual([
+    `${OWNER}/covers/${String(book.id)}.jpg`,
+    `${OWNER}/textures/${String(book.id)}.webp`,
+  ]);
+  expect(api.uploads[0]?.jpeg).toBe(true);
+  expect(book.texture_path).toBe(`${OWNER}/textures/${String(book.id)}.webp`);
   expect(api.calls.map((c) => c.action)).toEqual(['search', 'lookup', 'cover']);
 });
 

@@ -1,10 +1,19 @@
 import type { BookFormData } from './bookForm';
 import { covers } from './covers.svelte';
 import type { Json } from './database.types';
-import { COVER_BUCKET, deleteBook, insertBook, listBooks, updateBook } from './data/books';
-import { uploadCover } from './data/covers';
+import {
+  COVER_BUCKET,
+  deleteBook,
+  insertBook,
+  listBooks,
+  renameCategory,
+  updateBook,
+} from './data/books';
+import { downloadCover, uploadCover, uploadTexture } from './data/covers';
+import { runPool } from './importer';
+import { makeTexture } from './texture';
 import { deleteReading, insertReading, listReadings, updateReading } from './data/readings';
-import { getSettings } from './data/settings';
+import { getSettings, updateMySettings, type SettingsRow } from './data/settings';
 import { listYears, setBookOfYear, setOneLiner } from './data/years';
 import {
   buildShelves,
@@ -14,6 +23,8 @@ import {
   type YearRow,
 } from './shelves';
 import { parsePatternMap, type Pattern } from './spine/patterns';
+import { prefs } from './prefs.svelte';
+import { parseSpineStyle, parseThemePref, type SpineStyle, type ThemePref } from './theme';
 import { parseSpineData, toJson } from './spine/spineData';
 import { status } from './status.svelte';
 import { supabase } from './supabase';
@@ -53,6 +64,16 @@ function readingFields(data: BookFormData) {
   };
 }
 
+/** 표지로 질감 이미지를 만들어 올립니다. 실패하면 null(책은 생성형 책등으로 보임) */
+async function textureFor(bookId: string, cover: Blob): Promise<string | null> {
+  try {
+    return await uploadTexture(bookId, await makeTexture(cover));
+  } catch (e) {
+    console.warn('표지 질감을 만들지 못했어요', e);
+    return null;
+  }
+}
+
 class Library {
   books = $state.raw<BookRow[]>([]);
   readings = $state.raw<ReadingRow[]>([]);
@@ -60,6 +81,9 @@ class Library {
   patternMap = $state.raw<Record<string, Pattern>>({});
   /** 마지막으로 JSON 백업을 받은 시각 (30일 알림, PRD F9) */
   lastBackupAt = $state<string | null>(null);
+  settings = $state.raw<SettingsRow | null>(null);
+  /** 표지 질감 일괄 생성 진행 (없으면 null) */
+  textureJob = $state<{ done: number; total: number } | null>(null);
   state = $state<LoadState>('idle');
   currentYear = new Date().getFullYear();
 
@@ -81,7 +105,8 @@ class Library {
 
   /** 처음 불러올 때만 '불러오는 중'을 보여 주고, 저장 뒤 다시 불러올 때는 그대로 둡니다. */
   async load(): Promise<void> {
-    if (this.state !== 'ready') this.state = 'loading';
+    const first = this.state !== 'ready';
+    if (first) this.state = 'loading';
     try {
       const [books, readings, years, settings] = await Promise.all([
         listBooks(),
@@ -94,6 +119,8 @@ class Library {
       this.years = years;
       this.patternMap = parsePatternMap(settings?.pattern_map);
       this.lastBackupAt = settings?.last_backup_at ?? null;
+      this.settings = settings;
+      if (first && settings) this.#adoptPrefs(settings);
       this.state = 'ready';
     } catch (e) {
       console.warn('책장을 불러오지 못했어요', e);
@@ -107,7 +134,81 @@ class Library {
     this.years = [];
     this.patternMap = {};
     this.lastBackupAt = null;
+    this.settings = null;
     this.state = 'idle';
+  }
+
+  /**
+   * 테마·책등 스타일은 Supabase 값이 기준입니다(기기마다 같게, PRD F10). 처음 로그인할 때 한 번 맞춥니다.
+   * DB가 아직 기본값(시스템·생성형)인데 이 기기에서 고른 값이 있으면, 이 기기 값을 DB로 올립니다(첫 동기화).
+   */
+  #adoptPrefs(settings: SettingsRow) {
+    const theme = parseThemePref(settings.theme);
+    const spine = parseSpineStyle(settings.spine_style);
+    const untouched = theme === 'system' && spine === 'generated';
+    if (untouched && (prefs.themePref !== 'system' || prefs.spine !== 'generated')) {
+      void updateMySettings({ theme: prefs.themePref, spine_style: prefs.spine }).catch(
+        (e: unknown) => console.warn('설정을 저장하지 못했어요', e),
+      );
+      return;
+    }
+    if (prefs.themePref !== theme) prefs.setTheme(theme);
+    if (prefs.spine !== spine) prefs.setSpine(spine);
+  }
+
+  /** 테마 고르기: 바로 바꾸고 Supabase에도 저장 */
+  chooseTheme(theme: ThemePref): Promise<boolean> {
+    prefs.setTheme(theme);
+    return this.#save(() => updateMySettings({ theme }));
+  }
+
+  /** 책등 스타일 고르기. 표지 질감을 고르면 질감이 없는 책의 질감을 만듭니다(PRD 6.5). */
+  async chooseSpine(spine: SpineStyle): Promise<boolean> {
+    prefs.setSpine(spine);
+    const ok = await this.#save(() => updateMySettings({ spine_style: spine }));
+    if (spine === 'texture') void this.ensureTextures();
+    return ok;
+  }
+
+  /** 표지는 있는데 질감 이미지가 없는 책의 질감을 한꺼번에 만듭니다(2권씩). */
+  async ensureTextures(): Promise<number> {
+    if (this.textureJob) return 0;
+    const todo = this.books.filter((b) => b.cover_path && !b.texture_path);
+    if (todo.length === 0) return 0;
+    this.textureJob = { done: 0, total: todo.length };
+    let made = 0;
+    await runPool(
+      todo,
+      async (b) => {
+        try {
+          const path = await textureFor(b.id, await downloadCover(b.cover_path!));
+          if (path) {
+            await updateBook(b.id, { texture_path: path });
+            made++;
+          }
+        } catch (e) {
+          console.warn('표지 질감을 만들지 못했어요', e);
+        }
+      },
+      {
+        concurrency: 2,
+        gapMs: 0,
+        onProgress: (done) => (this.textureJob = { done, total: todo.length }),
+      },
+    );
+    this.textureJob = null;
+    await this.load();
+    return made;
+  }
+
+  /** 분야별 책등 무늬 (기본값과 다른 것만 저장) */
+  savePatternMap(map: Record<string, Pattern>): Promise<boolean> {
+    return this.#save(() => updateMySettings({ pattern_map: map }));
+  }
+
+  /** 분야 이름 바꾸기·합치기 */
+  renameCategory(from: string, to: string): Promise<boolean> {
+    return this.#save(() => renameCategory(from, to));
   }
 
   /** 저장 작업을 계정 영역의 저장 상태 점과 잇습니다. 실패하면 false */
@@ -141,6 +242,7 @@ class Library {
   ): Promise<boolean> {
     return this.#save(async () => {
       const coverPath = extras?.coverJpeg ? await uploadCover(bookId, extras.coverJpeg) : null;
+      const texturePath = extras?.coverJpeg ? await textureFor(bookId, extras.coverJpeg) : null;
       try {
         await insertBook({
           id: bookId,
@@ -151,6 +253,7 @@ class Library {
           category_raw: extras?.categoryRaw ?? null,
           size: extras?.size ?? null,
           cover_path: coverPath,
+          texture_path: texturePath,
           spine: toJson({
             palette: data.palette,
             candidates: extras?.candidates ?? [],
@@ -160,10 +263,11 @@ class Library {
         });
       } catch (e) {
         // 책을 못 넣었으면 방금 올린 표지도 지웁니다.
-        if (coverPath)
+        const uploaded = [coverPath, texturePath].filter((p): p is string => Boolean(p));
+        if (uploaded.length > 0)
           await supabase.storage
             .from(COVER_BUCKET)
-            .remove([coverPath])
+            .remove(uploaded)
             .catch(() => {});
         throw e;
       }
@@ -172,7 +276,9 @@ class Library {
         await insertReading({ book_id: bookId, ...readingFields(data) });
       } catch (e) {
         // 기록 없이 책만 남지 않게 되돌립니다.
-        await deleteBook({ id: bookId, cover_path: coverPath, texture_path: null }).catch(() => {});
+        await deleteBook({ id: bookId, cover_path: coverPath, texture_path: texturePath }).catch(
+          () => {},
+        );
         throw e;
       }
     });

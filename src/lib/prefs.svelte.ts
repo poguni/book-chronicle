@@ -6,6 +6,16 @@ import type { SpineStyle, ThemePref } from './theme';
 const THEME_KEY = 'bookchronicle-theme';
 const SPINE_KEY = 'bookchronicle-spine';
 const MOTION_KEY = 'bookchronicle-motion';
+const FOLD_KEY = 'bookchronicle-folded';
+
+function readFolded(): number[] {
+  try {
+    const v: unknown = JSON.parse(read(FOLD_KEY) ?? '[]');
+    return Array.isArray(v) ? v.filter((x): x is number => Number.isInteger(x)) : [];
+  } catch {
+    return [];
+  }
+}
 
 function read(key: string): string | null {
   try {
@@ -30,6 +40,8 @@ class Prefs {
   spine = $state<SpineStyle>(parseSpineStyle(read(SPINE_KEY)));
   /** 움직임 줄이기: 켜면 꺼내 보기 회전 없이 들림 + 테두리만. 끄면 운영체제 설정을 따름 (기기별 저장) */
   reduceMotion = $state(read(MOTION_KEY) === 'reduce');
+  /** 접어 둔 연도 책장 (지난해 접기, 이 기기에만 저장) */
+  folded = $state<number[]>(readFolded());
   #prefersDark = $state(darkQuery.matches);
   /** 지금 화면에 적용된 테마 */
   theme = $derived(resolveTheme(this.themePref, this.#prefersDark));
@@ -52,6 +64,17 @@ class Prefs {
     this.spine = spine;
     write(SPINE_KEY, spine);
     this.#apply();
+  }
+
+  setFolded(years: number[]) {
+    this.folded = [...new Set(years)].sort((a, b) => b - a);
+    write(FOLD_KEY, JSON.stringify(this.folded));
+  }
+
+  toggleFold(year: number) {
+    this.setFolded(
+      this.folded.includes(year) ? this.folded.filter((y) => y !== year) : [...this.folded, year],
+    );
   }
 
   setReduceMotion(on: boolean) {

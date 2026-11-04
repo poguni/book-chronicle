@@ -19,6 +19,10 @@
     onpick,
     onreorder,
     selectedId = null,
+    highlight = null,
+    foldable = false,
+    folded = false,
+    ontogglefold,
     empty,
   }: {
     kind?: ShelfKind;
@@ -32,6 +36,12 @@
     onreorder?: (readingIds: string[]) => void;
     /** 꺼내 본 책의 기록 ID */
     selectedId?: string | null;
+    /** 강조 보기: 진하게 둘 책이면 true (null이면 강조 없음) */
+    highlight?: ((s: ShelfSpine) => boolean) | null;
+    /** 지난해 접기 (P1): 접을 수 있는 책장인지, 접혀 있는지 */
+    foldable?: boolean;
+    folded?: boolean;
+    ontogglefold?: () => void;
     /** 책이 없을 때 보여 줄 내용 */
     empty?: Snippet;
   } = $props();
@@ -201,6 +211,16 @@
         : ko.shelf.meta(count, formatNumber(pages))}
     </span>
     {#if hint}<span class="meta">{hint}</span>{/if}
+    {#if foldable}
+      <button
+        type="button"
+        class="fold"
+        aria-expanded={!folded}
+        aria-controls="{id}-rows"
+        aria-label={folded ? ko.shelf.unfoldLabel(title, count) : ko.shelf.foldLabel(title)}
+        onclick={ontogglefold}>{folded ? ko.shelf.unfold : ko.shelf.fold}</button
+      >
+    {/if}
     {#if bookOfYearTitle}
       <span class="boy">
         <svg width="11" height="14" viewBox="0 0 12 14" fill="currentColor" aria-hidden="true">
@@ -214,42 +234,65 @@
   {#if onreorder && spines.length > 1}
     <span class="sr" id="{id}-reorder">{ko.shelf.reorderHint}</span>
   {/if}
-  <!-- svelte-ignore a11y_no_static_element_interactions -->
-  <div
-    class="rows"
-    class:dragging={dragId !== null}
-    bind:this={rowsEl}
-    {onkeydown}
-    {onpointerdown}
-    {onpointermove}
-    onpointerup={() => endDrag(true)}
-    onpointercancel={() => endDrag(false)}
-    {onclickcapture}
-  >
-    {#each rows as row, r (r)}
-      <div class="row">
-        <div class="shelf" {@attach measure}>
-          {#if shown.length === 0}
-            {@render empty?.()}
-          {:else}
-            {#each row as i (shown[i]?.readingId)}
-              {@const s = shown[i]!}
-              <Book
-                spine={s}
-                fit={fits[i] ?? null}
-                dataId={s.readingId}
-                dragging={dragId === s.readingId}
-                selected={selectedId === s.readingId}
-                describedby={onreorder && spines.length > 1 ? `${id}-reorder` : undefined}
-                onclick={() => onpick?.(s)}
-              />
-            {/each}
-          {/if}
+  {#if folded}
+    <!-- 접힌 책장: 그해 책등 색을 쪽수 비율로 이은 띠 (PRD F4 '지난해 접기') -->
+    <button
+      type="button"
+      class="band"
+      id="{id}-rows"
+      aria-label={ko.shelf.unfoldLabel(title, count)}
+      onclick={ontogglefold}
+    >
+      {#each spines as s (s.readingId)}
+        <span
+          class="seg"
+          class:dim={highlight ? !highlight(s) : false}
+          style:flex="{s.pages} 1 0"
+          style:background={s.palette.base}
+        ></span>
+      {/each}
+    </button>
+  {:else}
+    <!-- svelte-ignore a11y_no_static_element_interactions -->
+    <div
+      id="{id}-rows"
+      class="rows"
+      class:dragging={dragId !== null}
+      bind:this={rowsEl}
+      {onkeydown}
+      {onpointerdown}
+      {onpointermove}
+      onpointerup={() => endDrag(true)}
+      onpointercancel={() => endDrag(false)}
+      {onclickcapture}
+    >
+      {#each rows as row, r (r)}
+        <div class="row">
+          <div class="shelf" {@attach measure}>
+            {#if shown.length === 0}
+              {@render empty?.()}
+            {:else}
+              {#each row as i (shown[i]?.readingId)}
+                {@const s = shown[i]!}
+                <Book
+                  spine={s}
+                  fit={fits[i] ?? null}
+                  dataId={s.readingId}
+                  dragging={dragId === s.readingId}
+                  selected={selectedId === s.readingId}
+                  dim={highlight ? !highlight(s) : false}
+                  lean={kind === 'reading'}
+                  describedby={onreorder && spines.length > 1 ? `${id}-reorder` : undefined}
+                  onclick={() => onpick?.(s)}
+                />
+              {/each}
+            {/if}
+          </div>
+          <div class="plank" aria-hidden="true"></div>
         </div>
-        <div class="plank" aria-hidden="true"></div>
-      </div>
-    {/each}
-  </div>
+      {/each}
+    </div>
+  {/if}
 </section>
 
 <style>
@@ -273,6 +316,37 @@
   .meta {
     font-size: 13px;
     color: var(--muted);
+  }
+  .fold {
+    height: 28px;
+    padding: 0 10px;
+    border-radius: 8px;
+    border: 1px solid var(--line);
+    background: var(--card);
+    color: var(--muted);
+    font-size: 12px;
+    cursor: pointer;
+  }
+  .band {
+    display: flex;
+    gap: 1px;
+    height: 18px;
+    padding: 0;
+    border: 0;
+    border-radius: 4px;
+    overflow: hidden;
+    background: var(--line);
+    cursor: pointer;
+  }
+  .band .seg {
+    min-width: 2px;
+  }
+  .band .seg.dim {
+    opacity: 0.28;
+  }
+  .band:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
   }
   .boy {
     margin-left: auto;

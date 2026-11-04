@@ -249,3 +249,10 @@ export function decemberNoticeDue(
 ): boolean {
   return today.getMonth() === 11 && p.booksThisYear > 0 && !p.bookOfYearChosen && !p.seen;
 }
+
+/** 분야별 책 수 (설정의 분야 관리) */
+export function categoryCounts(books: readonly { category: string | null }[]): Map<string, number> {
+  const m = new Map<string, number>();
+  for (const b of books) if (b.category) m.set(b.category, (m.get(b.category) ?? 0) + 1);
+  return m;
+}

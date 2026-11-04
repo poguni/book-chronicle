@@ -10,11 +10,23 @@
     summary,
     query = $bindable(''),
     sort = $bindable<SortKey>('manual'),
+    highlight = $bindable(''),
+    categories = [],
+    canFold = false,
+    allFolded = false,
+    onfoldpast,
   }: {
     dateLine: string;
     summary: YearSummary;
     query?: string;
     sort?: SortKey;
+    /** 강조 보기 값: '' | 'rating' | 'cat:분야' */
+    highlight?: string;
+    categories?: string[];
+    /** 지난해 책장이 있어 접을 수 있는지, 모두 접혀 있는지 */
+    canFold?: boolean;
+    allFolded?: boolean;
+    onfoldpast?: () => void;
   } = $props();
 
   const sorts: { value: SortKey; label: string }[] = [
@@ -59,6 +71,23 @@
           onclick={() => (sort = s.value)}>{s.label}</button
         >
       {/each}
+    </div>
+    <div class="view">
+      <label class="hl">
+        <span class="sr">{ko.top.highlight}</span>
+        <select bind:value={highlight} aria-label={ko.top.highlight}>
+          <option value="">{ko.top.highlightNone}</option>
+          <option value="rating">{ko.top.highlightRating}</option>
+          {#each categories as c (c)}
+            <option value="cat:{c}">{ko.top.highlightCategory(c)}</option>
+          {/each}
+        </select>
+      </label>
+      {#if canFold}
+        <button type="button" class="chip" aria-pressed={allFolded} onclick={onfoldpast}>
+          {allFolded ? ko.top.unfoldAll : ko.top.foldPast}
+        </button>
+      {/if}
     </div>
   </div>
 </div>
@@ -159,7 +188,30 @@
     color: var(--text);
     font-weight: 700;
   }
+  .view {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    justify-content: flex-end;
+    width: 100%;
+  }
+  .hl select {
+    height: 40px;
+    padding: 0 10px;
+    border-radius: var(--radius-m);
+    border: 1px solid var(--line);
+    background: var(--card);
+    color: var(--text);
+    font-size: 13px;
+    max-width: 220px;
+  }
+  .view .chip {
+    height: 40px;
+  }
   @media (max-width: 899px) {
+    .view {
+      justify-content: flex-start;
+    }
     h1 {
       font-size: 24px;
     }

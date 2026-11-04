@@ -25,3 +25,11 @@ export async function updateSettings(userId: string, patch: SettingsUpdate): Pro
   const { error } = await supabase.from('settings').update(patch).eq('user_id', userId);
   if (error) throw error;
 }
+
+/** 지금 로그인한 사용자의 설정 고치기 (테마·책등 스타일·무늬 매핑) */
+export async function updateMySettings(patch: SettingsUpdate): Promise<void> {
+  const { data } = await supabase.auth.getSession();
+  const userId = data.session?.user.id;
+  if (!userId) throw new Error('login_required');
+  await updateSettings(userId, patch);
+}

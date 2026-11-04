@@ -75,7 +75,12 @@ export async function fakeDb(page: Page, seed: Partial<FakeDb> = {}): Promise<Fa
     const json = (status: number, body: unknown) =>
       route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
 
-    if (req.method() === 'GET') return json(200, rows);
+    if (req.method() === 'GET') {
+      // .range(from, to)는 offset·limit으로 옵니다(fetchAll이 1,000개씩 나눠 받음).
+      const offset = Number(url.searchParams.get('offset') ?? 0);
+      const limit = url.searchParams.get('limit');
+      return json(200, rows.slice(offset, limit === null ? undefined : offset + Number(limit)));
+    }
     if (req.method() === 'POST') {
       const body = req.postDataJSON() as Row | Row[];
       for (const r of Array.isArray(body) ? body : [body]) {

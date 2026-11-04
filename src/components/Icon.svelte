@@ -9,6 +9,7 @@
     gear: 'M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1',
     search: 'M20 20l-3.5-3.5',
     plus: 'M12 5v14M5 12h14',
+    barcode: 'M4 6v12M7 6v12M10.5 6v12M13 6v12M16.5 6v12M20 6v12',
     close: 'M6 6l12 12M18 6L6 18',
     menu: 'M4 7h16M4 12h16M4 17h16',
     logout: 'M15 4h4v16h-4M10 8l-4 4 4 4M6 12h10',

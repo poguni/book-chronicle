@@ -9,6 +9,7 @@
 
 <script lang="ts">
   import { ko } from '../lib/i18n/ko';
+  import { library } from '../lib/library.svelte';
   import { prefs } from '../lib/prefs.svelte';
   import type { Route } from '../lib/route';
   import type { SaveState } from '../lib/status.svelte';
@@ -127,7 +128,7 @@
             type="button"
             role="radio"
             aria-checked={prefs.theme === t.value}
-            onclick={() => prefs.setTheme(t.value)}>{t.label}</button
+            onclick={() => library.chooseTheme(t.value)}>{t.label}</button
           >
         {/each}
       </div>
@@ -137,7 +138,7 @@
             type="button"
             role="radio"
             aria-checked={prefs.spine === s.value}
-            onclick={() => prefs.setSpine(s.value)}>{s.label}</button
+            onclick={() => library.chooseSpine(s.value)}>{s.label}</button
           >
         {/each}
       </div>

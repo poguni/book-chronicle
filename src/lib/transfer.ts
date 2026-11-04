@@ -22,7 +22,8 @@ import {
   removeFiles,
   updateBook,
 } from './data/books';
-import { downloadCover, uploadCover } from './data/covers';
+import { downloadCover, uploadCover, uploadTexture } from './data/covers';
+import { makeTexture } from './texture';
 import { insertReadings, listReadings, updateReading } from './data/readings';
 import { getSettings, updateSettings } from './data/settings';
 import { deleteAllYears, listYears, upsertYears } from './data/years';
@@ -105,7 +106,10 @@ export async function runImport(
   for (const s of news) idOf.set(s.tempId, crypto.randomUUID());
 
   // 1) 표지
-  const art = new Map<string, { palette: Palette; candidates: string[]; path: string }>();
+  const art = new Map<
+    string,
+    { palette: Palette; candidates: string[]; path: string; texture: string | null }
+  >();
   let coverFailed = 0;
   const withCover = opts.covers ? news.filter((s) => s.book.cover) : [];
   opts.onProgress?.({ phase: 'covers', done: 0, total: withCover.length });
@@ -116,10 +120,14 @@ export async function runImport(
       try {
         const { result, jpeg } = await processCover(await fetchCover(s.book.cover!));
         const path = await uploadCover(id, jpeg);
+        const texture = await makeTexture(jpeg)
+          .then((t) => uploadTexture(id, t))
+          .catch(() => null);
         art.set(id, {
           palette: result?.palette ?? presetPalette(id),
           candidates: result?.candidates ?? [],
           path,
+          texture,
         });
       } catch (e) {
         console.warn('표지를 가져오지 못했어요', e);
@@ -151,6 +159,7 @@ export async function runImport(
       category_raw: s.book.categoryRaw,
       size: null,
       cover_path: a?.path ?? null,
+      texture_path: a?.texture ?? null,
       source: 'csv',
       spine: toJson({
         palette: a?.palette ?? presetPalette(id),
@@ -169,14 +178,18 @@ export async function runImport(
   try {
     await insertBooks(books);
   } catch (e) {
-    await removeFiles([...art.values()].map((a) => a.path));
+    await removeFiles(
+      [...art.values()].flatMap((a) => (a.texture ? [a.path, a.texture] : [a.path])),
+    );
     throw e;
   }
   try {
     await insertReadings(readings);
   } catch (e) {
     await deleteBooksByIds(books.map((b) => b.id!)).catch(() => {});
-    await removeFiles([...art.values()].map((a) => a.path));
+    await removeFiles(
+      [...art.values()].flatMap((a) => (a.texture ? [a.path, a.texture] : [a.path])),
+    );
     throw e;
   }
 
