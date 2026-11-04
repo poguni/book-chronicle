@@ -202,8 +202,9 @@
 - [x] ~~로컬 실행(`supabase functions serve`)~~ Deno·Docker가 없어 Vitest로 핵심 로직 검사(15개)
 - [x] ~~알라딘 함수 배포~~(2026-11-04 배포·점검 → 알라딘 API 종료 확인)
 - [x] 카카오·국립중앙도서관으로 바꾼 `bookchronicle-books` 작성, 마이그레이션 `0004`(source에 kakao)
-- [ ] **사용자 확인 후** `db push`(0004), `secrets set KAKAO_REST_API_KEY NLK_CERT_KEY`, `functions deploy bookchronicle-books`, 예전 함수·`ALADIN_TTB_KEY` 지우기
-- [ ] 다른 계정(테스트용)으로 호출하면 거부되는지 확인 — 배포 후 `npm run check:books` (알라딘 함수에서는 보안 점검 6개 통과)
+- [x] **사용자 확인 후** `db push`(0004), `secrets set KAKAO_REST_API_KEY`, `functions deploy bookchronicle-books`, 예전 함수·`ALADIN_TTB_KEY` 지우기 (2026-11-04)
+- [ ] 국립중앙도서관 인증키 승인 후 `NLK_CERT_KEY` 등록, `check:books`에서 쪽수 확인
+- [x] 다른 계정(테스트용)으로 호출하면 거부되는지 확인 — `npm run check:books` 9/10 통과(남은 1개는 국립중앙도서관 키 승인 대기)
 
 ### 5-2. 앱
 - [x] `src/lib/aladin.ts`: 함수 호출, 시간 제한 8초, 1회 재시도, 실패 시 수동 입력 안내
@@ -217,6 +218,8 @@
 - [x] 확인: 단위 104개·E2E 53개 통과(가짜 함수·Storage로 검색→고르기→표지 색→저장, ISBN, 중복, 실패·권한 없음)
 
 **완료 기준**: 제목 검색으로 10초 안에 한 권 등록, 표지가 Storage에 저장되고 생성형 책등이 표지와 어울린다. 로그아웃 상태에서는 함수를 호출할 수 없다.
+
+**Phase 5 완료 (2026-11-04)** — 배포 후 검색으로 책 꽂기 확인. 남은 일: 국립중앙도서관 인증키 승인 뒤 `NLK_CERT_KEY` 등록(쪽수·분류)
 
 > **시작 프롬프트 예시**
 > Phase 5를 진행해 줘. docs/decisions/existing-app-analysis.md를 먼저 읽고 알라딘 Edge Function을 만들어 줘. 비밀 값 등록과 배포는 내가 확인한 다음에 해 줘.
