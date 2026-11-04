@@ -198,6 +198,28 @@ class Library {
     });
   }
 
+  /**
+   * 한 책장 안 책 순서를 저장합니다(끌어 옮기기, 결정 0009). readingIds는 새 순서대로의 기록 ID.
+   * 화면이 바로 바뀌도록 먼저 고쳐 두고, 순서가 바뀐 기록만 저장합니다. 실패하면 다시 불러와 되돌립니다.
+   */
+  async reorder(readingIds: readonly string[]): Promise<boolean> {
+    const next = new Map(readingIds.map((id, i) => [id, i]));
+    const changed = this.readings.filter(
+      (r) => next.has(r.id) && r.shelf_position !== next.get(r.id),
+    );
+    if (changed.length === 0) return true;
+    this.readings = this.readings.map((r) =>
+      next.has(r.id) ? { ...r, shelf_position: next.get(r.id)! } : r,
+    );
+    const ok = await this.#save(async () => {
+      await Promise.all(
+        changed.map((r) => updateReading(r.id, { shelf_position: next.get(r.id)! })),
+      );
+    });
+    if (!ok) await this.load();
+    return ok;
+  }
+
   /** 기록이 하나뿐이면 책까지 지우고, 여러 개면 그 기록만 지웁니다. */
   removeEntry(bookId: string, readingId: string): Promise<boolean> {
     const book = this.bookById(bookId);

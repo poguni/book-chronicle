@@ -23,7 +23,13 @@
   } from '../lib/bookForm';
   import { ko } from '../lib/i18n/ko';
   import { library, type BookExtras } from '../lib/library.svelte';
-  import { DEFAULT_PAGES, spineHeight } from '../lib/spine/geometry';
+  import {
+    DEFAULT_PAGES,
+    fitTitle,
+    spineHeight,
+    spineHk,
+    spineWidthPx,
+  } from '../lib/spine/geometry';
   import { CATEGORIES, patternFor, type Pattern } from '../lib/spine/patterns';
   import Book from './Book.svelte';
   import BookSearch from './BookSearch.svelte';
@@ -199,6 +205,17 @@
       isBookOfYear: false,
     };
   });
+  // 미리 보기 책장은 760px 책장과 같은 두께로 그립니다(아래 .preview의 --spine-k).
+  const previewFit = $derived.by(() => {
+    const hk = spineHk(typeof window === 'undefined' ? 1440 : window.innerWidth);
+    return fitTitle(
+      preview.title,
+      preview.author,
+      preview.pattern,
+      spineWidthPx(preview.pages, 760),
+      preview.height * hk,
+    );
+  });
 
   $effect(() => {
     dialog.showModal();
@@ -319,11 +336,11 @@
             <div class="preview" inert aria-hidden="true">
               <div class="preview-shelf">
                 {#each neighbors.slice(0, 1) as n (n.readingId)}
-                  <Book spine={n} showTitle={false} tabindex={-1} />
+                  <Book spine={n} fit={null} tabindex={-1} />
                 {/each}
-                <Book spine={preview} showTitle={true} tabindex={-1} />
+                <Book spine={preview} fit={previewFit} tabindex={-1} />
                 {#each neighbors.slice(1) as n (n.readingId)}
-                  <Book spine={n} showTitle={false} tabindex={-1} />
+                  <Book spine={n} fit={null} tabindex={-1} />
                 {/each}
               </div>
               <div class="preview-plank"></div>
@@ -581,8 +598,8 @@
   }
   /* 760px 책장 위에 꽂힌 것과 같은 두께로 미리 보기 */
   .preview {
-    --spine-k: 0.1444px;
-    --spine-max: 68px;
+    --spine-k: 0.0912px;
+    --spine-max: 45.6px;
     flex: none;
     width: 150px;
     display: flex;

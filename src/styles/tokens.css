@@ -1,12 +1,14 @@
 /* 공통 디자인 토큰 (DESIGN 3.2) — 테마와 상관없는 값 */
 :root {
   --font-body: 'Noto Sans KR', system-ui, sans-serif;
+  /* 책등 제목·저자: 작은 크기에서도 잘 읽히는 고딕 (결정 0009) */
+  --font-spine: 'Pretendard Variable', Pretendard, 'Noto Sans KR', system-ui, sans-serif;
   --side-w: 232px;
   --detail-w: clamp(360px, 26vw, 440px);
   --radius-s: 8px;
   --radius-m: 12px;
   --radius-l: 16px;
-  --spine-k: 0.019cqw; /* 쪽당 책등 두께 */
+  --spine-k: 0.012cqw; /* 쪽당 책등 두께 (결정 0009) */
   --spine-hk: clamp(0.72px, 0.07vw, 0.98px); /* 책등 높이 배율 */
   --ease-book: cubic-bezier(0.2, 0.7, 0.2, 1);
   --success: #7fb069; /* 저장됨 점 (DESIGN 3.1) */

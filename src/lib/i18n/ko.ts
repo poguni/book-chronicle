@@ -47,6 +47,7 @@ export const ko = {
     searchLabel: '내 책장에서 찾기',
     searchPlaceholder: '제목·저자로 내 책장에서 찾기',
     sortLabel: '정렬',
+    sortManual: '내 순서',
     sortDate: '완독일순',
     sortColor: '색상순',
     sortCategory: '분야순',
@@ -64,6 +65,8 @@ export const ko = {
     bookOfYear: (title: string) => `그해의 책 · ${title}`,
     loadError: '책장을 불러오지 못했어요. 연결을 확인한 뒤 다시 시도해 주세요.',
     retry: '다시 불러오기',
+    /** 책등의 aria-describedby: 순서 바꾸는 방법 */
+    reorderHint: '끌어서 옮기거나 Alt와 좌우 화살표로 순서를 바꿀 수 있어요.',
   },
   book: {
     /** 책등 aria-label: 제목, 저자, 쪽수, 완독 연월, (그해의 책) — DESIGN 9장 */

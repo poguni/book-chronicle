@@ -9,7 +9,7 @@
     dateLine,
     summary,
     query = $bindable(''),
-    sort = $bindable<SortKey>('date'),
+    sort = $bindable<SortKey>('manual'),
   }: {
     dateLine: string;
     summary: YearSummary;
@@ -18,6 +18,7 @@
   } = $props();
 
   const sorts: { value: SortKey; label: string }[] = [
+    { value: 'manual', label: ko.top.sortManual },
     { value: 'date', label: ko.top.sortDate },
     { value: 'color', label: ko.top.sortColor },
     { value: 'category', label: ko.top.sortCategory },

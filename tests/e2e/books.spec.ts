@@ -279,3 +279,84 @@ test('읽는 중으로 바꾼 책은 맨 위 읽는 중 선반에, 중단한 책
     '중단한 책',
   );
 });
+
+/** 올해 책장의 책 제목을 보이는 순서대로 */
+async function shelfTitles(page: Page): Promise<string[]> {
+  return page.locator(`#y${year} button.book .spine .t`).allTextContents();
+}
+
+test('책등을 끌어 옮기면 순서가 바뀌고 내 순서로 저장된다', async ({ page }) => {
+  const db = await loginAs(page, '#/', seed({ [year]: 3 }));
+  await expect
+    .poll(() => shelfTitles(page))
+    .toEqual([`${year}년의 책 1`, `${year}년의 책 2`, `${year}년의 책 3`]);
+  const first = page.locator(`#y${year} button.book`).first();
+  const last = page.locator(`#y${year} button.book`).last();
+  const a = (await first.boundingBox())!;
+  const b = (await last.boundingBox())!;
+  await page.mouse.move(a.x + a.width / 2, a.y + a.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(a.x + a.width / 2 + 10, a.y + a.height / 2, { steps: 3 });
+  await page.mouse.move(b.x + b.width + 4, b.y + b.height / 2, { steps: 8 });
+  await page.mouse.up();
+
+  await expect
+    .poll(() => shelfTitles(page))
+    .toEqual([`${year}년의 책 2`, `${year}년의 책 3`, `${year}년의 책 1`]);
+  // 끌고 놓아도 수정 창은 열리지 않음
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: '내 순서' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
+  await expect
+    .poll(() => db.readings.map((r) => [r.id, r.shelf_position]))
+    .toEqual([
+      [`reading-${year}-0`, 2],
+      [`reading-${year}-1`, 0],
+      [`reading-${year}-2`, 1],
+    ]);
+
+  // 완독일순으로 보면 원래 순서, 내 순서로 돌아오면 옮긴 순서
+  await page.getByRole('button', { name: '완독일순' }).click();
+  await expect
+    .poll(() => shelfTitles(page))
+    .toEqual([`${year}년의 책 1`, `${year}년의 책 2`, `${year}년의 책 3`]);
+  await page.getByRole('button', { name: '내 순서' }).click();
+  await expect
+    .poll(() => shelfTitles(page))
+    .toEqual([`${year}년의 책 2`, `${year}년의 책 3`, `${year}년의 책 1`]);
+});
+
+test('Alt+←→로 고른 책을 옆으로 옮긴다', async ({ page }) => {
+  await loginAs(page, '#/', seed({ [year]: 3 }));
+  const first = page.getByRole('button', { name: new RegExp(`^${year}년의 책 1,`) });
+  await first.focus();
+  await page.keyboard.press('Alt+ArrowRight');
+  await expect
+    .poll(() => shelfTitles(page))
+    .toEqual([`${year}년의 책 2`, `${year}년의 책 1`, `${year}년의 책 3`]);
+  await expect(first).toBeFocused();
+});
+
+test('한 해 15권이 한 줄에 꽂히고, 긴 제목도 책등에 모두 보인다', async ({ page }) => {
+  // 휴대폰 폭에서는 책등이 제목을 담을 만큼 두꺼워 두 줄로 넘어갈 수 있음 (결정 0009)
+  test.skip(test.info().project.name === 'mobile', '데스크톱 폭 기준');
+  const data = seed({ [year]: 15 });
+  data.books![0]!.title = '파이썬 라이브러리를 활용한 데이터 분석 개정 3판';
+  await loginAs(page, '#/', data);
+  const shelf = page.locator(`#y${year}`);
+  await expect(shelf.locator('button.book')).toHaveCount(15);
+  await expect(shelf.locator('.plank')).toHaveCount(1);
+  // 제목이 잘리지 않음: 그려진 크기가 내용보다 작지 않음
+  const clipped = await shelf
+    .locator('.spine .t')
+    .evaluateAll(
+      (els) =>
+        els.filter(
+          (el) => el.scrollHeight > el.clientHeight + 1 || el.scrollWidth > el.clientWidth + 1,
+        ).length,
+    );
+  expect(clipped).toBe(0);
+  expect(await horizontalOverflow(page)).toBeLessThanOrEqual(0);
+});

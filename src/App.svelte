@@ -130,6 +130,7 @@
           loadState={library.state}
           onaddbook={addBook}
           onpick={pick}
+          onreorder={(ids) => library.reorder(ids)}
           onretry={() => library.load()}
         />
       {/if}

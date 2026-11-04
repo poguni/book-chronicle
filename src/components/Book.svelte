@@ -2,13 +2,17 @@
   import { ko } from '../lib/i18n/ko';
   import type { ShelfSpine } from '../lib/shelves';
   import { inkFor } from '../lib/spine/color';
+  import type { TitleFit } from '../lib/spine/geometry';
 
   // 책 한 권 = 책등 면 + 표지 면 CSS 3D 상자 (DESIGN 6.2). 꺼내 보기 회전은 Phase 6에서 켭니다.
   let {
     spine,
-    showTitle,
+    fit,
     onclick,
     tabindex,
+    dataId,
+    dragging = false,
+    describedby,
   }: {
     spine: Pick<
       ShelfSpine,
@@ -23,9 +27,14 @@
       | 'finishedAt'
       | 'isBookOfYear'
     >;
-    showTitle: boolean;
+    /** 제목 글자 크기·줄 수 (fitTitle). null이면 제목을 그리지 않음 */
+    fit: TitleFit | null;
     onclick?: () => void;
     tabindex?: number;
+    /** 끌어 옮기기에서 책을 찾는 표시 (기록 ID) */
+    dataId?: string;
+    dragging?: boolean;
+    describedby?: string;
   } = $props();
 
   const fg = $derived(inkFor(spine.palette.base));
@@ -51,6 +60,8 @@
   type="button"
   class="book"
   class:estimated={spine.estimated}
+  class:dragging
+  data-id={dataId}
   style:--p={spine.pages}
   style:--hh={spine.height}
   style:--base={spine.palette.base}
@@ -60,14 +71,19 @@
   style:--fgl={fgl}
   style:--art={art}
   aria-label={label}
+  aria-describedby={describedby}
   {tabindex}
   {onclick}
 >
   <span class="face spine pat-{spine.pattern}">
-    {#if showTitle}<span class="t">{spine.title}</span>{/if}
+    {#if fit}
+      <span class="t" style:font-size="{fit.font}px" style:max-height="{fit.maxHeight}px"
+        >{spine.title}</span
+      >
+    {/if}
     {#if spine.pattern === 'hardcover'}
       <span class="mk"></span>
-    {:else if spine.author && showTitle}
+    {:else if spine.author && fit?.author}
       <span class="a">{spine.author}</span>
     {/if}
   </span>
@@ -84,7 +100,12 @@
     --cw: calc(var(--hh) * var(--spine-hk) * 0.68);
     position: relative;
     flex: none;
-    width: clamp(8px, calc(var(--p) * var(--spine-k)), var(--spine-max, 9cqw));
+    /* geometry.ts spineWidthPx와 같은 식 (결정 0009) */
+    width: clamp(
+      12px,
+      max(calc(var(--p) * var(--spine-k)), calc(var(--p) * 0.07px)),
+      var(--spine-max, max(6cqw, 36px))
+    );
     height: calc(var(--hh) * var(--spine-hk));
     padding: 0;
     margin: 0;
@@ -98,6 +119,13 @@
   .book:hover,
   .book:focus-visible {
     transform: translateY(-8px);
+  }
+  /* 끌어 옮기는 중인 책: 조금 들려 있고 반투명 */
+  .book.dragging {
+    transform: translateY(-14px);
+    opacity: 0.75;
+    cursor: grabbing;
+    z-index: 2;
   }
   .face {
     position: absolute;
@@ -143,21 +171,20 @@
     border: 1px dashed color-mix(in srgb, var(--fg) 50%, transparent);
     border-radius: inherit;
   }
+  /* 제목은 줄이지 않고 다 보여 줌: 글자 크기와 줄 수는 fitTitle이 정함 (결정 0009) */
   .t {
     position: relative;
     writing-mode: vertical-rl;
-    font-family: var(--font-display);
+    font-family: var(--font-spine);
     font-weight: 700;
-    font-size: 12px;
-    line-height: 1;
-    letter-spacing: 0.04em;
-    white-space: nowrap;
+    line-height: 1.15;
+    letter-spacing: 0.02em;
+    word-break: normal;
+    overflow-wrap: anywhere;
     overflow: hidden;
-    text-overflow: ellipsis;
-    max-height: 62%;
-    /* 책등이 짧으면 저자와 겹치지 않게 제목이 줄어들고 말줄임표로 끝남 */
-    flex: 0 1 auto;
-    min-height: 0;
+    /* 계산보다 줄이 늘어도 책등 밖으로 넘치지 않게 */
+    max-width: 100%;
+    flex: none;
   }
   /* 시안은 저자를 절대 위치로 두지만, 짧은 책등에서 제목과 겹쳐 흐름 안에 둡니다. */
   .a {
@@ -166,8 +193,10 @@
     margin-bottom: 22px;
     padding-top: 4px;
     writing-mode: vertical-rl;
+    font-family: var(--font-spine);
     font-size: 9px;
-    opacity: 0.75;
+    font-weight: 500;
+    opacity: 0.8;
     white-space: nowrap;
     max-height: 22%;
     overflow: hidden;
@@ -197,8 +226,9 @@
       linear-gradient(var(--accent-c), var(--accent-c)) 0 calc(100% - 7px) / 100% 3px no-repeat,
       linear-gradient(var(--band) 0 18%, var(--base) 18%);
   }
+  /* 세로 % 여백은 폭 기준이라 책등 높이로 직접 계산 (띠 18% + 8px, geometry.ts fitTitle과 같음) */
   .pat-paperback .t {
-    margin-top: calc(18% + 8px);
+    margin-top: calc(var(--hh) * var(--spine-hk) * 0.18 + 8px);
   }
   /* 패턴 ③ 라벨형: 가운데 밝은 라벨 상자 */
   .pat-label .t {
@@ -228,6 +258,10 @@
     text-align: left;
     box-shadow: var(--book-shadow);
     overflow: hidden;
+  }
+  /* 꽂혀 있을 때는 표지 면을 숨김: 원근 때문에 얇은 책등 옆으로 비쳐 이웃 책을 가림 (결정 0009) */
+  .book:not([aria-pressed='true']) .cover {
+    visibility: hidden;
   }
   .cover b {
     font-family: var(--font-display);

@@ -17,6 +17,7 @@
     loadState,
     onaddbook,
     onpick,
+    onreorder,
     onretry,
   }: {
     today: Date;
@@ -24,6 +25,7 @@
     loadState: LoadState;
     onaddbook: () => void;
     onpick: (spine: ShelfSpine) => void;
+    onreorder: (readingIds: string[]) => void;
     onretry: () => void;
   } = $props();
 
@@ -35,7 +37,13 @@
 
   // 검색은 F8(P1)에서 붙입니다.
   let query = $state('');
-  let sort = $state<SortKey>('date');
+  let sort = $state<SortKey>('manual');
+
+  /** 끌어 옮기면 그 결과가 '내 순서'가 됩니다(결정 0009). */
+  function reorder(readingIds: string[]) {
+    sort = 'manual';
+    onreorder(readingIds);
+  }
 </script>
 
 <ShelfTop {dateLine} {summary} bind:query bind:sort />
@@ -59,6 +67,7 @@
         bookOfYearTitle={shelf.bookOfYearTitle}
         spines={sortSpines(shelf.spines, sort)}
         {onpick}
+        onreorder={reorder}
       >
         {#snippet empty()}
           <EmptyState message={ko.shelf.empty}>

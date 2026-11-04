@@ -30,6 +30,8 @@ export type ShelfSpine = {
   finishedAt: string | null;
   rating: number | null;
   createdAt: string;
+  /** 끌어 옮겨 정한 책장 안 순서(없으면 null) */
+  position: number | null;
   isBookOfYear: boolean;
 };
 
@@ -46,7 +48,7 @@ export type ShelfYear = {
   bookOfYearTitle: string | null;
 };
 
-export type SortKey = 'date' | 'color' | 'category';
+export type SortKey = 'manual' | 'date' | 'color' | 'category';
 
 function byDate(a: ShelfSpine, b: ShelfSpine): number {
   const fa = a.finishedAt ?? '';
@@ -55,9 +57,21 @@ function byDate(a: ShelfSpine, b: ShelfSpine): number {
   return a.createdAt < b.createdAt ? -1 : a.createdAt > b.createdAt ? 1 : 0;
 }
 
-/** 완독일순(기본) / 색상순 / 분야순. 같으면 완독일순 */
+/**
+ * 내 순서(기본) / 완독일순 / 색상순 / 분야순. 같으면 완독일순.
+ * 내 순서: 끌어 옮겨 정한 순서대로, 순서가 없는 책(새로 꽂은 책)은 그 뒤에 완독일순 (결정 0009)
+ */
 export function sortSpines(spines: readonly ShelfSpine[], key: SortKey): ShelfSpine[] {
   const list = [...spines];
+  if (key === 'manual') {
+    return list.sort((a, b) => {
+      if (a.position !== null && b.position !== null && a.position !== b.position)
+        return a.position - b.position;
+      if (a.position !== null && b.position === null) return -1;
+      if (a.position === null && b.position !== null) return 1;
+      return byDate(a, b);
+    });
+  }
   if (key === 'color') {
     return list.sort((a, b) => hueKey(a.palette.base) - hueKey(b.palette.base) || byDate(a, b));
   }
@@ -113,6 +127,7 @@ export function buildShelves(
       finishedAt: status === 'finished' ? r.finished_at : null,
       rating: r.rating === null ? null : Number(r.rating),
       createdAt: r.created_at,
+      position: r.shelf_position ?? null,
       isBookOfYear: status === 'finished' && r.year !== null && bookOfYear.get(r.year) === book.id,
     };
     if (status === 'reading') reading.push(spineItem);

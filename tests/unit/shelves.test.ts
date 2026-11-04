@@ -58,6 +58,7 @@ function reading(
     year: finishedAt ? Number(finishedAt.slice(0, 4)) : null,
     rating: null,
     note: null,
+    shelf_position: null,
     created_at: T,
     updated_at: T,
     ...over,
@@ -205,6 +206,26 @@ describe('sortSpines', () => {
 
   it('분야순(같은 분야는 완독일순)', () => {
     expect(sortSpines(spines, 'category').map((s) => s.bookId)).toEqual(['blue', 'green', 'red']);
+  });
+
+  it('내 순서: 정한 순서대로, 순서 없는 새 책은 뒤에 완독일순', () => {
+    const placed = spines.map((s) =>
+      s.bookId === 'red' ? { ...s, position: 0 } : s.bookId === 'green' ? { ...s, position: 1 } : s,
+    );
+    expect(sortSpines(placed, 'manual').map((s) => s.bookId)).toEqual(['red', 'green', 'blue']);
+    // 아무 순서도 없으면 완독일순과 같음
+    expect(sortSpines(spines, 'manual').map((s) => s.bookId)).toEqual(['blue', 'green', 'red']);
+  });
+
+  it('기록의 shelf_position이 책등 position으로 옮겨진다', () => {
+    const [shelf] = buildShelves(
+      [book('a')],
+      [reading('1', 'a', '2026-01-01', { shelf_position: 3 })],
+      noYears,
+      {},
+      2026,
+    );
+    expect(shelf!.spines[0]!.position).toBe(3);
   });
 });
 

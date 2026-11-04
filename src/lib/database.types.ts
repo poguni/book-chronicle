@@ -98,6 +98,7 @@ export type Database = {
           id: string;
           note: string | null;
           rating: number | null;
+          shelf_position: number | null;
           started_at: string | null;
           status: string;
           updated_at: string;
@@ -112,6 +113,7 @@ export type Database = {
           id?: string;
           note?: string | null;
           rating?: number | null;
+          shelf_position?: number | null;
           started_at?: string | null;
           status: string;
           updated_at?: string;
@@ -126,6 +128,7 @@ export type Database = {
           id?: string;
           note?: string | null;
           rating?: number | null;
+          shelf_position?: number | null;
           started_at?: string | null;
           status?: string;
           updated_at?: string;

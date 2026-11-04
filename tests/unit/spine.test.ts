@@ -3,10 +3,14 @@ import { contrast, hueKey, INK_DARK, INK_LIGHT, inkFor } from '../../src/lib/spi
 import {
   categoryAveragePages,
   effectivePages,
+  fitTitle,
   hashId,
   packRows,
   spineHeight,
+  spineHk,
   spineWidthPx,
+  textEm,
+  TITLE_FONT_MIN,
 } from '../../src/lib/spine/geometry';
 import {
   CATEGORIES,
@@ -90,11 +94,27 @@ describe('책등 크기', () => {
     expect(hashId('abc')).toBe(hashId('abc'));
   });
 
-  it('두께 = clamp(8px, 쪽수 × 0.019cqw, 9cqw)', () => {
+  it('두께 = clamp(12px, max(쪽수 × 0.012cqw, 쪽수 × 0.07px), max(6cqw, 36px))', () => {
     // 책장 폭 760px: 1cqw = 7.6px
-    expect(spineWidthPx(300, 760)).toBeCloseTo(300 * 0.019 * 7.6, 5);
-    expect(spineWidthPx(20, 760)).toBe(8);
-    expect(spineWidthPx(2000, 760)).toBeCloseTo(9 * 7.6, 5);
+    expect(spineWidthPx(300, 760)).toBeCloseTo(300 * 0.012 * 7.6, 5);
+    expect(spineWidthPx(20, 760)).toBe(12);
+    expect(spineWidthPx(2000, 760)).toBeCloseTo(6 * 7.6, 5);
+    // 좁은 책장(휴대폰): 쪽당 0.07px 하한, 최대 36px
+    expect(spineWidthPx(300, 330)).toBeCloseTo(21, 5);
+    expect(spineWidthPx(2000, 330)).toBe(36);
+  });
+
+  it('한 해 15권(평균 300쪽)이 데스크톱 책장의 3분의 2 안에 한 줄로 꽂힌다', () => {
+    const widths = Array.from({ length: 15 }, () => spineWidthPx(300, 700));
+    expect(packRows(widths, 700)).toHaveLength(1);
+    const used = widths.reduce((a, b) => a + b, 0) + 14 * 2;
+    expect(used).toBeLessThan(700 * (2 / 3));
+  });
+
+  it('높이 배율은 CSS --spine-hk와 같은 식', () => {
+    expect(spineHk(390)).toBe(0.72);
+    expect(spineHk(1200)).toBeCloseTo(0.84, 5);
+    expect(spineHk(1920)).toBe(0.98);
   });
 
   it('쪽수를 모르면 분야 평균, 그것도 없으면 280쪽 추정', () => {
@@ -118,6 +138,48 @@ describe('책등 크기', () => {
       pages: 123,
       estimated: false,
     });
+  });
+});
+
+describe('fitTitle', () => {
+  it('세로쓰기 길이: 한글 1.2em, 영문·숫자 0.6em, 띄어쓰기 0.3em', () => {
+    expect(textEm('데미안')).toBeCloseTo(3.6, 5);
+    expect(textEm('1984')).toBeCloseTo(2.4, 5);
+    expect(textEm('총 균 쇠')).toBeCloseTo(4.2, 5);
+  });
+
+  it('짧은 제목은 가장 큰 12px 한 줄, 저자도 함께', () => {
+    const fit = fitTitle('데미안', '헤세', 'paperback', 24, 150);
+    expect(fit).toMatchObject({ font: 12, cols: 1, author: true });
+  });
+
+  it('긴 제목은 글자를 줄이거나 여러 줄로 나눠 모두 넣는다', () => {
+    const title = '파이썬 라이브러리를 활용한 데이터 분석';
+    const fit = fitTitle(title, '웨스 맥키니', 'paperback', 24, 150);
+    expect(fit.font).toBeGreaterThanOrEqual(TITLE_FONT_MIN);
+    // 줄 수 × 줄 높이 안에 제목 길이가 들어감
+    expect(fit.cols * fit.maxHeight).toBeGreaterThanOrEqual(textEm(title) * fit.font);
+    // 줄들이 책등 폭 안에 들어감
+    expect(fit.cols * fit.font * 1.15).toBeLessThanOrEqual(24 - 3);
+  });
+
+  it('저자까지 넣으면 제목이 9px보다 작아질 때는 저자를 뺀다', () => {
+    const fit = fitTitle('통계학 입문: 데이터로 세상 읽기', '아무개 지음', 'paperback', 16, 130);
+    expect(fit.author).toBe(false);
+  });
+
+  it('하드커버는 저자를 넣지 않고, 라벨형은 상자 안쪽 여백을 높이에 더한다', () => {
+    expect(fitTitle('데미안', '헤세', 'hardcover', 24, 150).author).toBe(false);
+    const label = fitTitle('데미안', null, 'label', 30, 150);
+    const paper = fitTitle('데미안', null, 'paperback', 30, 150);
+    expect(label.maxHeight).toBeGreaterThan(0);
+    expect(paper.maxHeight).toBeGreaterThan(0);
+  });
+
+  it('가장 작은 글자로도 넘치면 7px로 둔다', () => {
+    const fit = fitTitle('아주 긴 제목'.repeat(10), null, 'label', 12, 100);
+    expect(fit.font).toBe(TITLE_FONT_MIN);
+    expect(fit.cols).toBe(1);
   });
 });
 
