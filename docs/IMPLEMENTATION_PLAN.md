@@ -138,13 +138,14 @@
 
 - [x] `src/styles/tokens.css`, `themes.css`: DESIGN 3장의 토큰을 그대로 옮김(서재·종이 둘 다 정의, 우선 서재 적용) — 로그인 화면 때문에 Phase 2에서 먼저 함(+ `base.css`)
 - [x] 글꼴 불러오기(나눔명조, 함렛, Noto Sans KR) — Phase 2에서 먼저 함
-- [ ] `App.svelte`: CSS Grid 3단(사이드바 232px / 본문 / 상세 패널 `clamp(360px, 26vw, 440px)`)
-- [ ] `Sidebar.svelte`: 로고, 책 꽂기 버튼, 메뉴 6개, 연도별 나이테(빈 상태), 보기 설정, 계정 영역(로그아웃)
-- [ ] 상단(제목, 올해 요약, 검색창, 정렬 칩) 자리
-- [ ] 아이콘 세트(DESIGN 10장)를 Svelte 컴포넌트로
-- [ ] `src/lib/theme.ts`: `data-theme`, `data-spine` 적용(`system`이면 운영체제 설정 따름)
-- [ ] `src/lib/i18n/ko.ts`: 화면 문구 모음
-- [ ] 공통 상태 표현 부품: 빈 상태, 불러오는 중, 연결 끊김 띠, 저장 상태 점(DESIGN 12장)
+- [x] `App.svelte`: CSS Grid 3단(사이드바 232px / 본문 / 상세 패널 `clamp(360px, 26vw, 440px)`)
+- [x] `Sidebar.svelte`: 로고, 책 꽂기 버튼, 메뉴 6개, 연도별 나이테(빈 상태), 보기 설정, 계정 영역(로그아웃)
+- [x] 상단(제목, 올해 요약, 검색창, 정렬 칩) 자리 — `ShelfTop.svelte`
+- [x] 아이콘 세트(DESIGN 10장)를 Svelte 컴포넌트로 — `Icon.svelte`, `BrandMark.svelte`
+- [x] `src/lib/theme.ts`: `data-theme`, `data-spine` 적용(`system`이면 운영체제 설정 따름) — 상태는 `prefs.svelte.ts`, 지금은 localStorage에만 기억(Supabase 저장은 Phase 9)
+- [x] `src/lib/i18n/ko.ts`: 화면 문구 모음
+- [x] 공통 상태 표현 부품: 빈 상태, 불러오는 중, 연결 끊김 띠, 저장 상태 점(DESIGN 12장)
+- [x] 확인: 단위 22개·E2E 17개 통과, 1440·1024·390px × 서재·종이 스크린샷 점검(가로 스크롤 없음). 결정은 `docs/decisions/0004-phase3-app-shell.md`
 
 **완료 기준**: 로그인 후 시안과 같은 3단 화면(데이터는 비어 있음)이 서재 테마로 보이고, 1200px·900px 아래에서 서랍·상단 바로 바뀐다.
 
