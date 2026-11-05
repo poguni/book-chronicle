@@ -81,7 +81,7 @@ test('연말 회고: 후보 제안, 그해의 책 3권 순위, 한 줄 회고 �
   const db = await loginAs(page, `#/recap/${y}`, yearsSeed({ [y]: 5, [y - 1]: 2 }));
   await expect(main(page).getByRole('heading', { name: `${y}년 연말 회고` })).toBeVisible();
   // 별점 5점인 책 4가 후보
-  await expect(main(page).getByText(`별점 5점인 「${y}년 책 4」은 어때요?`)).toBeVisible();
+  await expect(main(page).getByText(`별점 5점인 「${y}년 책 4」는 어때요?`)).toBeVisible();
   await main(page).getByRole('button', { name: '이 책으로 정하기' }).click();
   await expect(
     main(page).getByRole('button', { name: new RegExp(`^${y}년 책 4`) }),

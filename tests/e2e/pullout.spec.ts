@@ -88,7 +88,7 @@ test('책을 누르면 꺼내지고 상세 패널이 그 책으로 바뀐다. �
   await expect(p.getByText(`${year}.3`, { exact: true })).toBeVisible();
   await expect(p.getByText('마음에 남은 문장')).toBeVisible();
   // 다시 읽은 기록 목록
-  await expect(p.getByText('독서 기록 2번')).toBeVisible();
+  await expect(p.getByText('독서 기록 2개')).toBeVisible();
   await expect(p.getByRole('button', { name: new RegExp(`^${year - 1}.2 완독`) })).toBeVisible();
 
   await second.click();
@@ -148,10 +148,10 @@ test('그해의 책으로 정하고 뺄 수 있다', async ({ page }) => {
   expect(db.years[0]?.book_of_year).toEqual([]);
 });
 
-test('상세 패널의 기록 수정으로 고치기 창을 연다', async ({ page }) => {
+test('상세 패널의 기록 고치기로 고치기 창을 연다', async ({ page }) => {
   await loginAs(page, '#/', seed());
   await bookBtn(page, '둘째 책').click();
-  await panel(page).getByRole('button', { name: '기록 수정' }).click();
+  await panel(page).getByRole('button', { name: '기록 고치기' }).click();
   const dialog = page.getByRole('dialog', { name: '기록 고치기' });
   await expect(dialog.getByRole('textbox', { name: '제목', exact: true })).toHaveValue('둘째 책');
   // 대화 상자를 Esc로 닫아도 꺼낸 책은 그대로

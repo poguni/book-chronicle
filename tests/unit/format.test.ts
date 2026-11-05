@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { formatNumber, formatToday, monthBars, ordinalKo } from '../../src/lib/format';
+import { josa } from '../../src/lib/i18n/josa';
 
 describe('formatToday', () => {
   it('연월일과 요일을 한국어로 쓴다', () => {
@@ -42,5 +43,27 @@ describe('monthBars', () => {
   it('권수가 없으면 0', () => {
     const bars = monthBars([1, 2], 2026, today);
     expect(bars.map((b) => b.count)).toEqual([1, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
+  });
+});
+
+describe('josa: 받침에 따른 조사', () => {
+  it('한글 받침', () => {
+    expect(josa('데미안', '을/를')).toBe('을');
+    expect(josa('코스모스', '을/를')).toBe('를');
+    expect(josa('사피엔스', '은/는')).toBe('는');
+    expect(josa('인문', '으로/로')).toBe('으로');
+    expect(josa('역사', '으로/로')).toBe('로');
+    // ㄹ 받침 뒤에는 '로'
+    expect(josa('소설', '으로/로')).toBe('로');
+  });
+
+  it('숫자·영문은 읽는 소리로, 괄호·문장 부호는 건너뜀', () => {
+    expect(josa('2026년 책 4', '은/는')).toBe('는');
+    expect(josa('2026년 책 3', '은/는')).toBe('은');
+    expect(josa('#2F4F66', '으로/로')).toBe('으로');
+    expect(josa('#C9A45C', '으로/로')).toBe('로');
+    expect(josa('1984', '을/를')).toBe('를');
+    expect(josa('HTML', '을/를')).toBe('을');
+    expect(josa('파친코 (1)', '을/를')).toBe('을');
   });
 });

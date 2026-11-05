@@ -1,4 +1,5 @@
 // 화면 문구 모음 (CLAUDE.md 7장: 한국어 존댓말, 문구는 이 파일 한곳에)
+import { josa } from './josa';
 
 export const ko = {
   appName: '북크로니클',
@@ -162,7 +163,8 @@ export const ko = {
     accent: '강조색',
     colorSlot: '바꿀 책등 색',
     candidates: '표지에서 뽑은 색',
-    useColor: (slot: string, hex: string) => `${slot}을 ${hex}로`,
+    useColor: (slot: string, hex: string) =>
+      `${slot}${josa(slot, '을/를')} ${hex}${josa(hex, '으로/로')}`,
     customColor: '색 직접 고르기',
     coverAlt: (title: string) => `${title || '책'} 표지`,
     pattern: '책등 무늬',
@@ -176,7 +178,7 @@ export const ko = {
     submitRecord: '기록 저장',
     submitEdit: '고친 내용 저장',
     saving: '저장하는 중…',
-    cancel: '그만두기',
+    cancel: '취소',
     reread: '다시 읽은 기록 더하기',
     deleteBook: '이 책 지우기',
     deleteReading: '이 기록만 지우기',
@@ -192,7 +194,7 @@ export const ko = {
   },
   detail: {
     label: '선택한 책과 올해 요약',
-    close: '상세 닫기',
+    close: '상세 패널 닫기',
     selected: '선택한 책',
     noSelection: '책을 꽂고 책등을 누르면 여기에서 기록을 볼 수 있어요.',
     glance: (year: number) => `${year} 한눈에`,
@@ -200,7 +202,7 @@ export const ko = {
     statBooks: '읽은 책',
     statPages: '넘긴 쪽',
     statRating: '평균 별점',
-    statTop: '가장 많이',
+    statTop: '많이 읽은 분야',
     none: '–',
     monthsLabel: (year: number) => `${year}년 월별 완독 권수`,
     bookOfYearTag: '그해의 책',
@@ -216,7 +218,7 @@ export const ko = {
     reading: '읽는 중',
     dropped: '중단',
     rating: (n: number | null) => (n === null ? '별점 없음' : `별점 ${n}점`),
-    readings: (n: number) => `독서 기록 ${n}번`,
+    readings: (n: number) => `독서 기록 ${n}개`,
     readingItem: (p: { date: string | null; status: 'finished' | 'reading' | 'dropped' }) =>
       p.status === 'reading'
         ? '읽는 중'
@@ -227,7 +229,7 @@ export const ko = {
             : '완독(날짜 모름)',
     noMemo: '아직 남긴 한 줄이 없어요. 이 책을 덮으며 떠오른 문장을 남겨 볼까요?',
     memoLabel: '한 줄 메모',
-    edit: '기록 수정',
+    edit: '기록 고치기',
     makeBookOfYear: '그해의 책으로',
     unmakeBookOfYear: '그해의 책에서 빼기',
     coverAlt: (title: string) => `${title} 표지`,
@@ -235,7 +237,7 @@ export const ko = {
     ringsLabel: (years: number[]) =>
       years.length === 0
         ? '아직 나이테가 없어요.'
-        : `${years[years.length - 1]}년부터 ${years[0]}년까지의 독서 나이테. 바깥 고리가 ${years[0]}년이고, 고리 조각 하나가 책 한 권입니다.`,
+        : `${years[years.length - 1]}년부터 ${years[0]}년까지의 독서 나이테. 바깥 고리가 ${years[0]}년이고, 고리 조각 하나가 책 한 권이에요.`,
     ringsEmpty: '올해 첫 책을 꽂으면 새 고리가 생겨요.',
     ringsThickest: (ordinal: string, n: number) =>
       `${ordinal} 고리가 ${n}권으로 가장 두꺼워졌어요.`,
@@ -254,7 +256,8 @@ export const ko = {
   recapOfYear: (year: number) => `${year}년 연말 회고`,
   placeholder: '이 화면은 곧 채워질 예정이에요.',
   move: {
-    title: (title: string, year: number) => `「${title}」을 ${year}년 책장으로 옮길까요?`,
+    title: (title: string, year: number) =>
+      `「${title}」${josa(title, '을/를')} ${year}년 책장으로 옮길까요?`,
     hint: '완독일을 바꾸면 그해 책장으로 옮겨져요. 날짜를 확인해 주세요.',
     date: '완독일',
     confirm: '옮기기',
@@ -335,7 +338,8 @@ export const ko = {
     rankDown: (title: string) => `「${title}」 순위 내리기`,
     rankRemove: (title: string) => `「${title}」 빼기`,
     remove: '빼기',
-    candidate: (title: string, rating: number) => `별점 ${rating}점인 「${title}」은 어때요?`,
+    candidate: (title: string, rating: number) =>
+      `별점 ${rating}점인 「${title}」${josa(title, '은/는')} 어때요?`,
     useCandidate: '이 책으로 정하기',
     noBooks: '이 해에 완독한 책이 없어요.',
     oneLiner: '한 줄 회고',
@@ -521,7 +525,7 @@ export const ko = {
     errors: {
       not_json: 'JSON 파일이 아니에요.',
       not_backup: '북크로니클 백업 파일이 아니에요.',
-      too_new: '더 새 버전의 앱에서 만든 백업이에요. 앱을 새로 고친 뒤 다시 시도해 주세요.',
+      too_new: '더 새 버전의 앱에서 만든 백업이에요. 앱을 새로 고침한 뒤 다시 시도해 주세요.',
     },
     reminder: '마지막 백업 후 30일이 지났어요. 만일을 위해 백업 파일을 받아 둘까요?',
     reminderGo: '백업하러 가기',
@@ -551,7 +555,8 @@ export const ko = {
     renameTo: (c: string) => `「${c}」의 새 이름`,
     renameApply: '바꾸기',
     renameCancel: '취소',
-    renamed: (from: string, to: string) => `「${from}」을 「${to}」로 바꿨어요.`,
+    renamed: (from: string, to: string) =>
+      `「${from}」${josa(from, '을/를')} 「${to}」${josa(to, '으로/로')} 바꿨어요.`,
     connection: '도서 검색 연결',
     connectionHint: '카카오·국립중앙도서관 도서 검색이 되는지 확인해요.',
     check: '연결 확인',
@@ -568,7 +573,7 @@ export const ko = {
   login: {
     brand: '북크로니클 · BOOK CHRONICLE',
     title: '책장으로 돌아오신 걸 환영해요',
-    subtitle: '기존 독서 앱과 같은 계정으로 로그인합니다.',
+    subtitle: '기존 독서 앱과 같은 계정으로 로그인해요.',
     email: '이메일',
     emailPlaceholder: 'name@example.com',
     password: '비밀번호',
@@ -577,8 +582,8 @@ export const ko = {
     submitting: '로그인하는 중…',
     errorInvalid: '이메일 또는 비밀번호를 확인해 주세요',
     errorNotConfirmed: '메일함에서 이메일 인증을 마친 뒤 다시 로그인해 주세요',
-    errorNetwork: '연결을 확인해 주세요. 잠시 후 다시 시도할 수 있어요',
+    errorNetwork: '연결을 확인해 주세요. 잠시 뒤 다시 시도할 수 있어요',
     errorTooMany: '시도가 많았어요. 잠시 기다린 뒤 다시 로그인해 주세요',
-    errorUnknown: '로그인이 잠시 안 돼요. 잠시 후 다시 시도해 주세요',
+    errorUnknown: '로그인이 잠시 안 돼요. 잠시 뒤 다시 시도해 주세요',
   },
 } as const;

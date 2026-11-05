@@ -36,7 +36,7 @@ test('분야별 책등 무늬를 바꾸고, 분야 이름을 바꿔 합친다', 
   await main(page).getByRole('button', { name: '역사 이름 바꾸기' }).click();
   await main(page).getByRole('textbox', { name: '「역사」의 새 이름' }).fill('인문');
   await main(page).getByRole('button', { name: '바꾸기', exact: true }).click();
-  await expect(main(page).getByText('「역사」을 「인문」로 바꿨어요.')).toBeVisible();
+  await expect(main(page).getByText('「역사」를 「인문」으로 바꿨어요.')).toBeVisible();
   expect(db.books.filter((b) => b.category === '역사')).toHaveLength(0);
 });
 

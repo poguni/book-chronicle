@@ -51,13 +51,13 @@ function seed(perYear: Record<number, number>, pages = 300): Partial<FakeDb> {
   return { books, readings };
 }
 
-/** 책등을 눌러 꺼내 보고(이미 꺼내 있으면 그대로), 상세 패널의 '기록 수정'을 누릅니다. */
+/** 책등을 눌러 꺼내 보고(이미 꺼내 있으면 그대로), 상세 패널의 '기록 고치기'을 누릅니다. */
 async function openEdit(page: Page, name: RegExp) {
   const book = page.getByRole('button', { name }).first();
   if ((await book.getAttribute('aria-pressed')) !== 'true') await book.click();
   await page
     .getByRole('complementary', { name: '선택한 책과 올해 요약' })
-    .getByRole('button', { name: '기록 수정' })
+    .getByRole('button', { name: '기록 고치기' })
     .click();
 }
 
