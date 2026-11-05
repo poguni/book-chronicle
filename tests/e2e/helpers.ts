@@ -92,6 +92,12 @@ export async function fakeDb(page: Page, seed: Partial<FakeDb> = {}): Promise<Fa
           continue;
         }
         const row: Row = { user_id: USER_ID, created_at: now(), updated_at: now(), ...r };
+        // DB 기본값과 같게(새 연도 행: 그해의 책 빈 배열, 한 줄 회고·목표 없음)
+        if (table === 'years') {
+          row.book_of_year ??= [];
+          row.one_liner ??= null;
+          row.reading_goal ??= null;
+        }
         if (table === 'readings') {
           row.id ??= `reading-${tick}`;
           row.year =

@@ -165,7 +165,16 @@ describe('buildShelves', () => {
     const shelves = buildShelves(
       [book('a'), book('b')],
       [reading('r1', 'a', '2026-01-01'), reading('r2', 'b', '2026-02-01')],
-      [{ user_id: 'u', year: 2026, book_of_year: ['b'], one_liner: null, updated_at: T }],
+      [
+        {
+          user_id: 'u',
+          year: 2026,
+          book_of_year: ['b'],
+          one_liner: null,
+          reading_goal: null,
+          updated_at: T,
+        },
+      ],
       {},
       2026,
     );

@@ -13,6 +13,7 @@
   import { inkFor } from '../lib/spine/color';
   import { averageRating, monthCounts, topCategory } from '../lib/stats';
   import EmptyState from './EmptyState.svelte';
+  import GoalProgress from './GoalProgress.svelte';
   import Icon from './Icon.svelte';
   import MonthBars from './MonthBars.svelte';
   import Stars from './Stars.svelte';
@@ -30,6 +31,7 @@
     onedit,
     onbookofyear,
     bookOfYearNotice = null,
+    goal = null,
     onselectreading,
   }: {
     today: Date;
@@ -42,6 +44,8 @@
     onbookofyear: () => void;
     /** 그해의 책을 더 고를 수 없을 때의 안내 */
     bookOfYearNotice?: string | null;
+    /** 올해 목표 권수 */
+    goal?: number | null;
     onselectreading: (readingId: string) => void;
   } = $props();
 
@@ -189,11 +193,12 @@
         <span>{ko.detail.statTop}</span><b class="top">{top ?? ko.detail.none}</b>
       </div>
     </div>
+    {#if goal !== null}<GoalProgress {year} books={spines.length} {goal} />{/if}
     <MonthBars {bars} label={ko.detail.monthsLabel(year)} />
   </section>
 
   <section class="block">
-    <YearRings {shelves} {year} />
+    <YearRings {shelves} {year} {goal} />
   </section>
 </aside>
 

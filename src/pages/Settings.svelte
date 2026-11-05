@@ -1,11 +1,12 @@
 <script lang="ts">
+  import GoalProgress from '../components/GoalProgress.svelte';
   import { auth } from '../lib/auth.svelte';
   import { BookApiError, searchBooks } from '../lib/bookApi';
   import { ko } from '../lib/i18n/ko';
   import { library } from '../lib/library.svelte';
   import { prefs } from '../lib/prefs.svelte';
   import { CATEGORIES, DEFAULT_PATTERN_MAP, PATTERNS, type Pattern } from '../lib/spine/patterns';
-  import { categoryCounts } from '../lib/stats';
+  import { categoryCounts, shelfOf } from '../lib/stats';
   import type { SpineStyle, ThemePref } from '../lib/theme';
 
   // 설정 (PRD F10, DESIGN 10장): 보기, 분야와 책등 무늬, 도서 검색 연결, 백업, 계정
@@ -67,6 +68,9 @@
     }
   }
 
+  const thisYear = new Date().getFullYear();
+  const booksThisYear = $derived(shelfOf(library.shelves, thisYear)?.count ?? 0);
+
   const fmt = (iso: string) =>
     new Date(iso).toLocaleString('ko-KR', { dateStyle: 'medium', timeStyle: 'short' });
 </script>
@@ -127,6 +131,17 @@
       <span>{ko.settings.motion}</span>
     </label>
     <p id="motion-hint" class="hint">{ko.settings.motionHint}</p>
+  </section>
+
+  <section class="card" aria-labelledby="set-goal">
+    <h2 class="display" id="set-goal">{ko.goal.title}</h2>
+    <p class="hint">{ko.goal.settingsHint}</p>
+    <GoalProgress
+      year={thisYear}
+      books={booksThisYear}
+      goal={library.goalOf(thisYear)}
+      onsave={(g) => library.saveReadingGoal(thisYear, g)}
+    />
   </section>
 
   <section class="card" aria-labelledby="set-cat">

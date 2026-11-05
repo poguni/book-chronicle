@@ -15,7 +15,7 @@ import { makeTexture } from './texture';
 import { deleteReading, insertReading, listReadings, updateReading } from './data/readings';
 import { getSettings, updateMySettings, type SettingsRow } from './data/settings';
 import { moveRank, toggleRank } from './bookOfYear';
-import { listYears, setBookOfYear, setOneLiner } from './data/years';
+import { listYears, setBookOfYear, setOneLiner, setReadingGoal } from './data/years';
 import {
   buildShelves,
   type BookRow,
@@ -331,6 +331,14 @@ class Library {
     return ok;
   }
 
+  /**
+   * 다른 해 책장으로 옮기기(결정 0016): 완독일을 바꾸고, 새 책장에서는 순서를 정하지 않은
+   * 책으로(내 순서의 맨 뒤 쪽) 둡니다. 연도는 DB가 완독일에서 계산합니다.
+   */
+  moveToDate(readingId: string, date: string): Promise<boolean> {
+    return this.#save(() => updateReading(readingId, { finished_at: date, shelf_position: null }));
+  }
+
   /** 그해의 책 목록(고른 순서 = 순위) */
   booksOfYear(year: number): string[] {
     return this.years.find((y) => y.year === year)?.book_of_year ?? [];
@@ -350,6 +358,17 @@ class Library {
   moveBookOfYear(year: number, bookId: string, dir: -1 | 1): Promise<boolean> {
     const list = moveRank(this.booksOfYear(year), bookId, dir);
     return this.#save(() => setBookOfYear(year, list));
+  }
+
+  /** 그해 목표 권수(없으면 null) */
+  goalOf(year: number): number | null {
+    return this.years.find((y) => y.year === year)?.reading_goal ?? null;
+  }
+
+  /** 목표 권수 저장(1~1000으로 맞춤, null이면 지움) */
+  saveReadingGoal(year: number, goal: number | null): Promise<boolean> {
+    const clean = goal === null ? null : Math.min(1000, Math.max(1, Math.round(goal)));
+    return this.#save(() => setReadingGoal(year, clean));
   }
 
   /** 한 줄 회고 저장(앞뒤 공백 정리, 비우면 null, 80자까지) */

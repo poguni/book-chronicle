@@ -305,10 +305,11 @@ export async function runRestore(
       await insertBooks(books);
       await insertReadings(plan.readings);
       await upsertYears(
-        plan.years.map(({ year, book_of_year, one_liner }) => ({
+        plan.years.map(({ year, book_of_year, one_liner, reading_goal }) => ({
           year,
           book_of_year: book_of_year ?? [],
           one_liner: one_liner ?? null,
+          reading_goal: reading_goal ?? null,
         })),
       );
     } catch (e) {
@@ -317,7 +318,12 @@ export async function runRestore(
       await insertBooks(current.books).catch(() => {});
       await insertReadings(current.readings.map(withoutYear)).catch(() => {});
       await upsertYears(
-        years.map(({ year, book_of_year, one_liner }) => ({ year, book_of_year, one_liner })),
+        years.map(({ year, book_of_year, one_liner, reading_goal }) => ({
+          year,
+          book_of_year,
+          one_liner,
+          reading_goal,
+        })),
       ).catch(() => {});
       throw e;
     }
@@ -331,10 +337,11 @@ export async function runRestore(
     await insertBooks(books);
     await insertReadings(plan.readings);
     await upsertYears(
-      plan.years.map(({ year, book_of_year, one_liner }) => ({
+      plan.years.map(({ year, book_of_year, one_liner, reading_goal }) => ({
         year,
         book_of_year: book_of_year ?? [],
         one_liner: one_liner ?? null,
+        reading_goal: reading_goal ?? null,
       })),
     );
   }

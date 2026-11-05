@@ -213,6 +213,8 @@ export function planRestore(
         .map((id) => bookIdMap.get(id))
         .filter((id): id is string => Boolean(id)),
       one_liner: y.one_liner,
+      // 목표 권수가 없던 예전 백업은 null
+      reading_goal: y.reading_goal ?? null,
     }));
 
   const s = backup.settings;

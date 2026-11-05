@@ -18,7 +18,12 @@ export async function setBookOfYear(year: number, bookIds: string[]): Promise<vo
 
 /** 복원: 연도 회고 여러 개를 넣거나 고칩니다. */
 export async function upsertYears(
-  years: { year: number; book_of_year: string[]; one_liner: string | null }[],
+  years: {
+    year: number;
+    book_of_year: string[];
+    one_liner: string | null;
+    reading_goal: number | null;
+  }[],
 ): Promise<void> {
   if (years.length === 0) return;
   const { error } = await supabase.from('years').upsert(years, { onConflict: 'user_id,year' });
@@ -28,6 +33,14 @@ export async function upsertYears(
 /** 복원의 덮어쓰기: 내 연도 회고를 모두 지웁니다(RLS로 본인 행만). */
 export async function deleteAllYears(): Promise<void> {
   const { error } = await supabase.from('years').delete().not('year', 'is', null);
+  if (error) throw error;
+}
+
+/** 목표 권수(1~1000, 지우면 null) 저장. 행이 없으면 만들고, 다른 칸은 그대로 둡니다. */
+export async function setReadingGoal(year: number, goal: number | null): Promise<void> {
+  const { error } = await supabase
+    .from('years')
+    .upsert({ year, reading_goal: goal }, { onConflict: 'user_id,year' });
   if (error) throw error;
 }
 

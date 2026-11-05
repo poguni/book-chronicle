@@ -352,6 +352,10 @@
               {#if i === 0 && d && stats[1]}
                 <span class="d" title={ko.compare.vs(stats[1].year)}>{d}</span>
               {/if}
+              {#if m === 'books' && library.goalOf(s.year) !== null}
+                {@const g = library.goalOf(s.year)!}
+                <span class="g" class:done={s.books >= g}>{ko.goal.compare(g, s.books >= g)}</span>
+              {/if}
             </dd>
           </div>
         {/each}
@@ -639,6 +643,15 @@
     color: var(--accent);
     font-weight: 700;
     white-space: nowrap;
+  }
+  .g {
+    font-size: 12px;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+  .g.done {
+    color: var(--accent);
+    font-weight: 700;
   }
   .view-toggle {
     display: flex;

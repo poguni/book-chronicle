@@ -179,6 +179,7 @@ export type Database = {
         Row: {
           book_of_year: string[];
           one_liner: string | null;
+          reading_goal: number | null;
           updated_at: string;
           user_id: string;
           year: number;
@@ -186,6 +187,7 @@ export type Database = {
         Insert: {
           book_of_year?: string[];
           one_liner?: string | null;
+          reading_goal?: number | null;
           updated_at?: string;
           user_id?: string;
           year: number;
@@ -193,6 +195,7 @@ export type Database = {
         Update: {
           book_of_year?: string[];
           one_liner?: string | null;
+          reading_goal?: number | null;
           updated_at?: string;
           user_id?: string;
           year?: number;

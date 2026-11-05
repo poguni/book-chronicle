@@ -3,6 +3,7 @@
   import type { SortKey } from '../lib/shelves';
   import type { YearSummary } from '../lib/stats';
   import { ko } from '../lib/i18n/ko';
+  import GoalProgress from './GoalProgress.svelte';
   import Icon from './Icon.svelte';
 
   let {
@@ -15,9 +16,16 @@
     canFold = false,
     allFolded = false,
     onfoldpast,
+    year,
+    goal = null,
+    onsavegoal,
   }: {
     dateLine: string;
     summary: YearSummary;
+    year: number;
+    /** 올해 목표 권수 (결정 0016) */
+    goal?: number | null;
+    onsavegoal?: (goal: number | null) => Promise<boolean>;
     query?: string;
     sort?: SortKey;
     /** 강조 보기 값: '' | 'rating' | 'cat:분야' */
@@ -54,6 +62,9 @@
       {:else if summary.diffFromLastYear !== null && summary.diffFromLastYear < 0}
         <span>{ko.top.fewerThanLastYear(-summary.diffFromLastYear)}</span>
       {/if}
+    </div>
+    <div class="goal-wrap">
+      <GoalProgress {year} books={summary.books} {goal} onsave={onsavegoal} />
     </div>
   </div>
   <div class="tools">
@@ -124,6 +135,9 @@
     font-weight: var(--display-weight);
     font-size: 18px;
     margin-right: 2px;
+  }
+  .goal-wrap {
+    margin-top: 8px;
   }
   .summary .up {
     color: var(--accent);

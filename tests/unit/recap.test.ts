@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { moveRank, toggleRank } from '../../src/lib/bookOfYear';
+import { dateInYear, movedDate } from '../../src/lib/moveYear';
 import {
   CARD_SIZES,
   cardCategories,
@@ -14,6 +15,7 @@ import {
   categoryShares,
   change,
   decemberNoticeDue,
+  goalProgress,
   monthlySeries,
   OTHER_CATEGORY,
   yearsWithBooks,
@@ -242,7 +244,16 @@ describe('그해의 책 순위 (PRD F6 P1)', () => {
     const s = buildShelves(
       [book('a'), book('b')],
       [reading('1', 'a', '2026-01-10'), reading('2', 'b', '2026-02-10')],
-      [{ user_id: 'u', year: 2026, book_of_year: ['b', 'a'], one_liner: null, updated_at: T }],
+      [
+        {
+          user_id: 'u',
+          year: 2026,
+          book_of_year: ['b', 'a'],
+          one_liner: null,
+          reading_goal: null,
+          updated_at: T,
+        },
+      ],
       {},
       2026,
     );
@@ -275,5 +286,39 @@ describe('회고 카드 분야형', () => {
       { name: '기타', count: 3 },
     ]);
     expect(cardCategories([], '기타')).toEqual([]);
+  });
+});
+
+describe('목표 권수 진행률', () => {
+  it('목표가 없으면 null, 넘으면 막대는 가득·%는 그대로', () => {
+    expect(goalProgress(3, null)).toBeNull();
+    expect(goalProgress(12, 15)).toEqual({
+      books: 12,
+      goal: 15,
+      ratio: 0.8,
+      percent: 80,
+      left: 3,
+      done: false,
+    });
+    expect(goalProgress(18, 15)).toMatchObject({ ratio: 1, percent: 120, left: 0, done: true });
+    expect(goalProgress(1, 3)?.percent).toBe(33);
+  });
+});
+
+describe('다른 해로 옮길 때 완독일', () => {
+  const today = new Date(2026, 10, 5);
+  it('월·일은 그대로, 연도만 바꾼다. 그해에 없는 2월 29일은 28일', () => {
+    expect(movedDate('2025-03-14', 2023, today)).toBe('2023-03-14');
+    expect(movedDate('2024-02-29', 2025, today)).toBe('2025-02-28');
+    expect(movedDate('2023-02-28', 2024, today)).toBe('2024-02-28');
+  });
+  it('완독일이 없으면(연도 미상) 오늘의 월·일', () => {
+    expect(movedDate(null, 2022, today)).toBe('2022-11-05');
+  });
+  it('그해 안의 실제 날짜인지', () => {
+    expect(dateInYear('2024-02-29', 2024)).toBe(true);
+    expect(dateInYear('2025-02-29', 2025)).toBe(false);
+    expect(dateInYear('2025-03-14', 2024)).toBe(false);
+    expect(dateInYear('', 2024)).toBe(false);
   });
 });

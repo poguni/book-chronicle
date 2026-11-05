@@ -2,14 +2,24 @@
   import { ordinalKo } from '../lib/format';
   import { ko } from '../lib/i18n/ko';
   import type { ShelfYear } from '../lib/shelves';
-  import { ringCount, shelfOf, yearRings } from '../lib/stats';
+  import { goalProgress, ringCount, shelfOf, yearRings } from '../lib/stats';
 
-  // 올해의 나이테 (DESIGN 7.3): 132px 동심원. 바깥 고리가 올해(가장 최근 연도)
-  let { shelves, year }: { shelves: ShelfYear[]; year: number } = $props();
+  // 올해의 나이테 (DESIGN 7.3): 132px 동심원. 바깥 고리가 올해(가장 최근 연도).
+  // 목표가 있으면 나이테를 조금 줄이고 바깥에 목표 진행 호를 그립니다(결정 0016).
+  let {
+    shelves,
+    year,
+    goal = null,
+  }: { shelves: ShelfYear[]; year: number; goal?: number | null } = $props();
 
   const SIZE = 132;
-  const rings = $derived(yearRings(shelves, SIZE));
+  const ARC = 4;
   const count = $derived(shelfOf(shelves, year)?.count ?? 0);
+  const progress = $derived(goalProgress(count, goal));
+  const inner = $derived(progress ? SIZE - (ARC + 4) * 2 : SIZE);
+  const rings = $derived(yearRings(shelves, inner));
+  const R = (SIZE - ARC) / 2;
+  const C = 2 * Math.PI * R;
   const thickest = $derived(
     shelves.every((s) => s.kind !== 'year' || s.year === year || s.count <= count),
   );
@@ -21,10 +31,29 @@
           count,
         ),
   );
+  const label = $derived(
+    progress
+      ? `${ko.detail.ringsLabel(rings.years)}, ${ko.goal.rings(progress.books, progress.goal)}`
+      : ko.detail.ringsLabel(rings.years),
+  );
 </script>
 
 <div class="ringcard">
-  <div class="rings" role="img" aria-label={ko.detail.ringsLabel(rings.years)}>
+  <div class="rings" role="img" aria-label={label}>
+    {#if progress}
+      <svg width={SIZE} height={SIZE} aria-hidden="true">
+        <circle cx={SIZE / 2} cy={SIZE / 2} r={R} class="track" stroke-width={ARC} />
+        <circle
+          cx={SIZE / 2}
+          cy={SIZE / 2}
+          r={R}
+          class="arc"
+          stroke-width={ARC}
+          stroke-dasharray="{C * progress.ratio} {C}"
+          transform="rotate(-90 {SIZE / 2} {SIZE / 2})"
+        />
+      </svg>
+    {/if}
     {#each rings.discs as d, i (i)}
       <span
         style:left="{(SIZE - d.size) / 2}px"
@@ -38,6 +67,8 @@
   <div class="text">
     <h3 class="display">{ko.detail.ringsTitle}</h3>
     <span class="caption">{caption}</span>
+    {#if progress}<span class="caption goal">{ko.goal.rings(progress.books, progress.goal)}</span
+      >{/if}
     <a href="#/recap/{year}" class="btn-line">{ko.detail.toRecap}</a>
   </div>
 </div>
@@ -58,6 +89,24 @@
   .rings span {
     position: absolute;
     border-radius: 50%;
+  }
+  .rings svg {
+    position: absolute;
+    inset: 0;
+  }
+  .rings circle {
+    fill: none;
+    stroke-linecap: round;
+  }
+  .track {
+    stroke: var(--bar-off);
+  }
+  .arc {
+    stroke: var(--accent);
+  }
+  .caption.goal {
+    color: var(--text);
+    font-weight: 700;
   }
   .text {
     display: flex;

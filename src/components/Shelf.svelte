@@ -23,6 +23,9 @@
     foldable = false,
     folded = false,
     ontogglefold,
+    dropTarget = false,
+    ondragyear,
+    onmoveyear,
     empty,
   }: {
     kind?: ShelfKind;
@@ -42,6 +45,12 @@
     foldable?: boolean;
     folded?: boolean;
     ontogglefold?: () => void;
+    /** 다른 해 책장으로 끌어 옮기기 (결정 0016): 지금 끌고 있는 책이 이 책장 위에 있는지 */
+    dropTarget?: boolean;
+    /** 끄는 동안 손이 올라간 다른 해(없으면 null) */
+    ondragyear?: (year: number | null) => void;
+    /** 다른 해 책장에 놓았을 때 */
+    onmoveyear?: (spine: ShelfSpine, year: number) => void;
     /** 책이 없을 때 보여 줄 내용 */
     empty?: Snippet;
   } = $props();
@@ -97,6 +106,12 @@
   let press: { id: string; x: number; y: number } | null = null;
   let dragId = $state<string | null>(null);
   let suppressClick = false;
+  // 다른 해로 옮길 수 있는 책장: 연도 책장과 연도 미상 칸(읽는 중·중단은 상태가 바뀌는 일이라 제외)
+  const canMove = $derived(Boolean(onmoveyear) && (kind === 'year' || kind === 'unknown'));
+  let dropYear: number | null = null;
+  let last = { x: 0, y: 0 };
+  let edge = 0;
+  let scrolling = false;
 
   const ids = (list: readonly ShelfSpine[]) => list.map((s) => s.readingId);
   const sameOrder = (a: readonly ShelfSpine[], b: readonly ShelfSpine[]) =>
@@ -110,7 +125,6 @@
     press = { id: book.dataset.id, x: e.clientX, y: e.clientY };
   }
 
-  /** 끌고 있는 위치에 맞춰 책을 끼울 자리를 찾고 순서를 바로 바꿔 보여 줍니다. */
   function onpointermove(e: PointerEvent) {
     if (!press || !rowsEl) return;
     if (!dragId) {
@@ -119,12 +133,58 @@
       preview = [...spines];
       rowsEl.setPointerCapture(e.pointerId);
     }
+    last = { x: e.clientX, y: e.clientY };
+    // 화면 위·아래 끝 가까이에서는 저절로 스크롤(다른 해 책장이 화면 밖에 있을 때)
+    edge = e.clientY < 72 ? -1 : e.clientY > window.innerHeight - 72 ? 1 : 0;
+    if (edge !== 0 && !scrolling) autoScroll();
+    track(e.clientX, e.clientY);
+  }
+
+  function autoScroll() {
+    scrolling = true;
+    requestAnimationFrame(() => {
+      if (!dragId || edge === 0) {
+        scrolling = false;
+        return;
+      }
+      window.scrollBy(0, edge * 14);
+      track(last.x, last.y);
+      autoScroll();
+    });
+  }
+
+  /** 손 아래가 다른 해 책장이면 그 해(아니면 null) */
+  function yearUnder(x: number, y: number): number | null {
+    if (!canMove) return null;
+    for (const el of document.elementsFromPoint(x, y)) {
+      const v = (el as HTMLElement).dataset?.dropYear;
+      if (v !== undefined) {
+        const target = Number(v);
+        return target === year ? null : target;
+      }
+    }
+    return null;
+  }
+
+  /** 끌고 있는 위치에 맞춰 책을 끼울 자리를 찾고 순서를 바로 바꿔 보여 줍니다. */
+  function track(x: number, y: number) {
+    if (!rowsEl || !dragId) return;
+    const target = yearUnder(x, y);
+    if (target !== dropYear) {
+      dropYear = target;
+      ondragyear?.(target);
+    }
+    // 다른 해 책장 위에서는 이 책장의 순서를 처음대로 둡니다.
+    if (target !== null) {
+      if (preview && !sameOrder(preview, spines)) preview = [...spines];
+      return;
+    }
     const rowEls = [...rowsEl.querySelectorAll<HTMLElement>('.row')];
     let row = 0;
     let best = Infinity;
     rowEls.forEach((el, r) => {
       const rect = el.getBoundingClientRect();
-      const d = e.clientY < rect.top ? rect.top - e.clientY : Math.max(0, e.clientY - rect.bottom);
+      const d = y < rect.top ? rect.top - y : Math.max(0, y - rect.bottom);
       if (d < best) {
         best = d;
         row = r;
@@ -135,7 +195,7 @@
       if (el.dataset.id === dragId) continue;
       const r = rowEls.indexOf(el.closest<HTMLElement>('.row')!);
       const rect = el.getBoundingClientRect();
-      if (r < row || (r === row && rect.left + rect.width / 2 < e.clientX)) at++;
+      if (r < row || (r === row && rect.left + rect.width / 2 < x)) at++;
     }
     const current = preview ?? spines;
     const moving = current.find((s) => s.readingId === dragId);
@@ -150,8 +210,13 @@
       // 끌고 난 뒤 따라오는 click은 책 수정 창을 열지 않게 막습니다.
       suppressClick = true;
       setTimeout(() => (suppressClick = false), 0);
-      if (commit && preview && !sameOrder(preview, spines)) onreorder?.(ids(preview));
+      const moving = spines.find((s) => s.readingId === dragId);
+      if (commit && dropYear !== null && moving) onmoveyear?.(moving, dropYear);
+      else if (commit && preview && !sameOrder(preview, spines)) onreorder?.(ids(preview));
     }
+    if (dropYear !== null) ondragyear?.(null);
+    dropYear = null;
+    edge = 0;
     press = null;
     dragId = null;
     preview = null;
@@ -202,7 +267,13 @@
 
 <svelte:window bind:innerWidth />
 
-<section class="shelf-wrap {kind}" {id} aria-labelledby="{id}-title">
+<section
+  class="shelf-wrap {kind}"
+  class:drop-target={dropTarget}
+  {id}
+  aria-labelledby="{id}-title"
+  data-drop-year={kind === 'year' && year !== null ? year : undefined}
+>
   <div class="shelf-head">
     <h2 class="display" id="{id}-title">{title}</h2>
     <span class="meta">
@@ -220,6 +291,9 @@
         aria-label={folded ? ko.shelf.unfoldLabel(title, count) : ko.shelf.foldLabel(title)}
         onclick={ontogglefold}>{folded ? ko.shelf.unfold : ko.shelf.fold}</button
       >
+    {/if}
+    {#if dropTarget}
+      <span class="drop-hint" role="status">{ko.move.dropHint(title)}</span>
     {/if}
     {#if bookOfYearTitle}
       <span class="boy">
@@ -302,6 +376,16 @@
     flex-direction: column;
     gap: 8px;
     scroll-margin-top: 16px;
+  }
+  .shelf-wrap.drop-target {
+    outline: 2px dashed var(--accent);
+    outline-offset: 6px;
+    border-radius: var(--radius-m);
+  }
+  .drop-hint {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--accent);
   }
   .shelf-head {
     display: flex;

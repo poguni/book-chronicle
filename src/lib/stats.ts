@@ -76,6 +76,30 @@ export function yearBands(shelves: readonly ShelfYear[]) {
 }
 
 /** 올해의 나이테 원 하나: 지름(px), 색(원뿔 그러데이션 또는 CSS 변수) */
+export type GoalProgress = {
+  books: number;
+  goal: number;
+  /** 0~1 (넘어도 1) */
+  ratio: number;
+  /** 정수 %, 100을 넘을 수 있음 */
+  percent: number;
+  left: number;
+  done: boolean;
+};
+
+/** 목표 권수 진행률 (결정 0016). 목표가 없으면 null */
+export function goalProgress(books: number, goal: number | null): GoalProgress | null {
+  if (goal === null || goal <= 0) return null;
+  return {
+    books,
+    goal,
+    ratio: Math.min(1, books / goal),
+    percent: Math.floor((books / goal) * 100),
+    left: Math.max(0, goal - books),
+    done: books >= goal,
+  };
+}
+
 export type RingDisc = { size: number; background: string };
 
 /**

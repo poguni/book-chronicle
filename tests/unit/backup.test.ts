@@ -58,7 +58,14 @@ function reading(id: string, bookId: string, over: Partial<ReadingRow> = {}): Re
 }
 
 const years: YearRow[] = [
-  { user_id: ME, year: 2025, book_of_year: ['a'], one_liner: '좋은 해', updated_at: T },
+  {
+    user_id: ME,
+    year: 2025,
+    book_of_year: ['a'],
+    one_liner: '좋은 해',
+    reading_goal: 20,
+    updated_at: T,
+  },
 ];
 
 const data = {
@@ -129,7 +136,12 @@ describe('복원 계획', () => {
     expect(plan.covers).toEqual([{ bookId: 'b', dataUrl: 'data:image/jpeg;base64,BBB' }]);
     expect(plan.readings[0]).not.toHaveProperty('year');
     expect(plan.readings[0]).toMatchObject({ id: 'ra', shelf_position: 2 });
-    expect(plan.years[0]).toMatchObject({ year: 2025, book_of_year: ['a'], one_liner: '좋은 해' });
+    expect(plan.years[0]).toMatchObject({
+      year: 2025,
+      book_of_year: ['a'],
+      one_liner: '좋은 해',
+      reading_goal: 20,
+    });
     expect(plan.settings).toMatchObject({ theme: 'paper' });
   });
 
@@ -148,6 +160,17 @@ describe('복원 계획', () => {
     expect(plan.books[0]!.cover_path).toBeNull();
     expect(plan.readings.map((r) => r.book_id)).toEqual(ids);
     expect(plan.years[0]!.book_of_year).toEqual([ids[0]]);
+  });
+
+  it('목표 권수가 없던 예전 백업도 복원한다(목표는 비움)', () => {
+    const old = {
+      ...backup,
+      years: backup.years.map((y) =>
+        Object.fromEntries(Object.entries(y).filter(([k]) => k !== 'reading_goal')),
+      ) as unknown as YearRow[],
+    };
+    const plan = planRestore(old, ME, 'overwrite', { books: [], readings: [], years: [] }, newId);
+    expect(plan.years[0]).toMatchObject({ year: 2025, reading_goal: null });
   });
 
   it('합치기: 이미 있는 책(ID·ISBN)은 두고 없는 기록만 더한다. 이미 있는 해의 회고와 설정은 그대로', () => {

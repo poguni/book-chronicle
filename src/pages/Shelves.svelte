@@ -3,6 +3,7 @@
   import Icon from '../components/Icon.svelte';
   import LoadingSpines from '../components/LoadingSpines.svelte';
   import Shelf from '../components/Shelf.svelte';
+  import MoveDateDialog from '../components/MoveDateDialog.svelte';
   import ShelfTop from '../components/ShelfTop.svelte';
   import { formatToday, ordinalKo } from '../lib/format';
   import { ko } from '../lib/i18n/ko';
@@ -29,6 +30,9 @@
     onreorder,
     onretry,
     selectedId,
+    goal = null,
+    onsavegoal,
+    onmovedate,
   }: {
     today: Date;
     shelves: ShelfYear[];
@@ -38,7 +42,15 @@
     onreorder: (readingIds: string[]) => void;
     selectedId: string | null;
     onretry: () => void;
+    goal?: number | null;
+    onsavegoal?: (goal: number | null) => Promise<boolean>;
+    /** 다른 해 책장으로 옮기기: 기록의 완독일을 바꿈 (결정 0016) */
+    onmovedate?: (readingId: string, date: string) => Promise<boolean>;
   } = $props();
+
+  // 다른 해 책장으로 끌어 옮기기: 끄는 동안 손 아래 해, 놓은 뒤 확인할 책
+  let dropYear = $state<number | null>(null);
+  let moving = $state<{ spine: ShelfSpine; year: number } | null>(null);
 
   const year = $derived(today.getFullYear());
   const dateLine = $derived(
@@ -87,6 +99,9 @@
 <ShelfTop
   {dateLine}
   {summary}
+  {year}
+  {goal}
+  {onsavegoal}
   bind:query
   bind:sort
   bind:highlight
@@ -118,6 +133,9 @@
         onreorder={reorder}
         {selectedId}
         highlight={highlightFn}
+        dropTarget={shelf.kind === 'year' && shelf.year !== null && shelf.year === dropYear}
+        ondragyear={(y) => (dropYear = y)}
+        onmoveyear={onmovedate ? (s, y) => (moving = { spine: s, year: y }) : undefined}
         foldable={shelf.kind === 'year' && shelf.year !== null && shelf.year < year}
         folded={shelf.kind === 'year' && shelf.year !== null && prefs.folded.includes(shelf.year)}
         ontogglefold={() => shelf.year !== null && prefs.toggleFold(shelf.year)}
@@ -133,6 +151,17 @@
     {/each}
   {/if}
 </div>
+
+{#if moving && onmovedate}
+  {@const m = moving}
+  <MoveDateDialog
+    spine={m.spine}
+    year={m.year}
+    {today}
+    onconfirm={(date) => onmovedate(m.spine.readingId, date)}
+    onclose={() => (moving = null)}
+  />
+{/if}
 
 <style>
   .shelves {

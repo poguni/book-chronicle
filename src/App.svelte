@@ -184,6 +184,9 @@
           onreorder={(ids) => library.reorder(ids)}
           onretry={() => library.load()}
           {selectedId}
+          goal={library.goalOf(today.getFullYear())}
+          onsavegoal={(g) => library.saveReadingGoal(today.getFullYear(), g)}
+          onmovedate={(id, date) => library.moveToDate(id, date)}
         />
       {/if}
     </main>
@@ -199,6 +202,7 @@
         onedit={editSelected}
         onbookofyear={toggleBookOfYear}
         {bookOfYearNotice}
+        goal={library.goalOf(today.getFullYear())}
         onselectreading={(id) => void selectReading(id)}
       />
     {/if}
