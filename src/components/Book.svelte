@@ -20,6 +20,7 @@
     selected,
     dim = false,
     lean = false,
+    shift = 0,
   }: {
     spine: Pick<
       ShelfSpine,
@@ -48,6 +49,8 @@
     dim?: boolean;
     /** 읽는 중: 선반에 비스듬히 기대어 놓음 (P1) */
     lean?: boolean;
+    /** 꺼내 보기에서 옆으로 밀려나는 거리(px). 꺼낸 책 오른쪽 책들이 비켜 섬 */
+    shift?: number;
   } = $props();
 
   const fg = $derived(inkFor(spine.palette.base));
@@ -111,6 +114,7 @@
   style:--fg={fg}
   style:--fgl={fgl}
   style:--art={art}
+  style:translate={shift ? `${shift}px 0` : undefined}
   aria-label={label}
   aria-describedby={describedby}
   aria-pressed={selected}
@@ -137,6 +141,8 @@
       {#if spine.author}<small>{spine.author}</small>{/if}
     {/if}
   </span>
+  <!-- 꺼냈을 때 보이는 윗면: 책 두께만큼의 종이 결 (책 1,000권에서도 가볍게, 꺼낸 책에만) -->
+  {#if selected}<span class="face top" aria-hidden="true"></span>{/if}
   {#if spine.isBookOfYear}<span class="ribbon" aria-hidden="true"></span>{/if}
 </button>
 
@@ -160,7 +166,9 @@
     cursor: pointer;
     transform-style: preserve-3d;
     transform-origin: 0 50%;
-    transition: transform 0.5s var(--ease-book);
+    transition:
+      transform 0.5s var(--ease-book),
+      translate 0.5s var(--ease-book);
   }
   .book:hover,
   .book:focus-visible {
@@ -170,6 +178,13 @@
   .book[aria-pressed='true'] {
     transform: translateY(-14px) translateZ(36px) rotateY(-62deg);
     z-index: 5;
+  }
+  /* 빛은 앞에서: 옆으로 돌아간 책등은 조금 어둡게 */
+  .spine {
+    transition: filter 0.5s var(--ease-book);
+  }
+  .book[aria-pressed='true'] .spine {
+    filter: brightness(0.78);
   }
   /* 강조 보기: 강조하지 않는 책은 흐리게 (PRD F4) */
   .book.dim {
@@ -351,12 +366,47 @@
     box-shadow: var(--book-shadow);
     overflow: hidden;
   }
-  /* 꽂혀 있을 때는 표지 면을 숨김: 원근 때문에 얇은 책등 옆으로 비쳐 이웃 책을 가림 (결정 0009) */
+  /* 표지: 책등 쪽 접히는 홈의 그림자 + 은은한 광택 */
+  .cover::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background:
+      linear-gradient(
+        to right,
+        rgba(0, 0, 0, 0.32) 0,
+        rgba(0, 0, 0, 0.08) 5px,
+        rgba(255, 255, 255, 0.1) 7px,
+        transparent 12px
+      ),
+      linear-gradient(
+        115deg,
+        rgba(255, 255, 255, 0.16) 0%,
+        transparent 38%,
+        rgba(0, 0, 0, 0.12) 100%
+      );
+  }
+  /* 윗면: 책등과 표지 사이의 종이 덩어리(가로 = 책 두께, 세로 = 표지 너비). 안쪽으로 눕힘 */
+  .top {
+    left: 0;
+    width: 100%;
+    height: var(--cw);
+    transform-origin: top;
+    transform: rotateX(-90deg);
+    background:
+      repeating-linear-gradient(to right, transparent 0 2px, var(--book-page-line) 2px 3px),
+      var(--book-page);
+    box-shadow: inset 0 0 0 1px var(--book-page-line);
+  }
+  /* 꽂혀 있을 때는 표지·윗면을 숨김: 원근 때문에 얇은 책등 옆으로 비쳐 이웃 책을 가림 (결정 0009) */
   /* 꺼냈을 때 표지 면이 옆 책을 덮어도 옆 책을 누를 수 있게 */
-  .cover {
+  .cover,
+  .top {
     pointer-events: none;
   }
-  .book:not([aria-pressed='true']) .cover {
+  .book:not([aria-pressed='true']) .cover,
+  .book:not([aria-pressed='true']) .top {
     visibility: hidden;
   }
   .cover b {
@@ -391,8 +441,15 @@
       outline: 2px solid var(--accent);
       outline-offset: 2px;
     }
-    .book[aria-pressed='true'] .cover {
+    .book[aria-pressed='true'] .cover,
+    .book[aria-pressed='true'] .top {
       visibility: hidden;
+    }
+    .book {
+      translate: none !important;
+    }
+    .book[aria-pressed='true'] .spine {
+      filter: none;
     }
   }
   :global([data-motion='reduce']) .book {
@@ -403,7 +460,14 @@
     outline: 2px solid var(--accent);
     outline-offset: 2px;
   }
-  :global([data-motion='reduce']) .book[aria-pressed='true'] .cover {
+  :global([data-motion='reduce']) .book[aria-pressed='true'] .cover,
+  :global([data-motion='reduce']) .book[aria-pressed='true'] .top {
     visibility: hidden;
+  }
+  :global([data-motion='reduce']) .book {
+    translate: none !important;
+  }
+  :global([data-motion='reduce']) .book[aria-pressed='true'] .spine {
+    filter: none;
   }
 </style>

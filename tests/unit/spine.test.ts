@@ -6,6 +6,7 @@ import {
   fitTitle,
   hashId,
   packRows,
+  pulloutShifts,
   spineHeight,
   spineHk,
   spineWidthPx,
@@ -223,5 +224,36 @@ describe('parseSpineData', () => {
     expect(s.palette).toEqual(presetPalette('book-1'));
     expect(s.pattern).toBeNull();
     expect(parseSpineData(null, 'book-1').palette).toEqual(presetPalette('book-1'));
+  });
+});
+
+describe('꺼내 보기: 옆 책 밀기', () => {
+  // 폭 20px 책 다섯 권, 표지 면 100px
+  const widths = [20, 20, 20, 20, 20];
+  const row = [0, 1, 2, 3, 4];
+  const push =
+    Math.max(
+      0,
+      20 * Math.cos((62 * Math.PI) / 180) + 100 * Math.sin((62 * Math.PI) / 180) * 1.05 - 20,
+    ) + 6;
+
+  it('자리가 넉넉하면 오른쪽 책만 표지 폭만큼 민다', () => {
+    const s = pulloutShifts(widths, row, 1, 600, 100);
+    expect(s[0]).toBeUndefined();
+    expect(s[1]).toBeUndefined();
+    expect(s[2]).toBeCloseTo(push, 0);
+    expect(s[4]).toBe(s[2]);
+  });
+
+  it('줄 끝에 자리가 모자라면 꺼낸 책과 왼쪽 책을 당겨 표지가 잘리지 않게 한다', () => {
+    const used = 5 * 20 + 4 * 2;
+    const s = pulloutShifts(widths, row, 4, used + 20, 100);
+    const deficit = used + push - (used + 20);
+    expect(s[4]).toBeCloseTo(-deficit, 0);
+    expect(s[0]).toBeCloseTo(-deficit, 0);
+  });
+
+  it('고른 책이 다른 줄이면 아무것도 밀지 않는다', () => {
+    expect(pulloutShifts(widths, [0, 1], 3, 600, 100)).toEqual({});
   });
 });

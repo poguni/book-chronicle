@@ -4,7 +4,14 @@
   import { formatNumber } from '../lib/format';
   import { ko } from '../lib/i18n/ko';
   import type { ShelfKind, ShelfSpine } from '../lib/shelves';
-  import { fitTitle, packRows, spineHk, spineWidthPx } from '../lib/spine/geometry';
+  import {
+    COVER_RATIO,
+    fitTitle,
+    packRows,
+    pulloutShifts,
+    spineHk,
+    spineWidthPx,
+  } from '../lib/spine/geometry';
   import Book from './Book.svelte';
 
   // 한 연도 = 머리글 + 책장 + 선반 판 (DESIGN 6.1).
@@ -101,6 +108,16 @@
       width === 0 ? null : fitTitle(s.title, s.author, s.pattern, widths[i] ?? 0, s.height * hk),
     ),
   );
+
+  // 꺼내 보기: 꺼낸 책이 비스듬히 돌며 차지하는 만큼 같은 줄 책들을 옆으로 밉니다.
+  const shifts = $derived.by(() => {
+    if (!selectedId || dragId || width === 0) return {};
+    const sel = shown.findIndex((s) => s.readingId === selectedId);
+    const row = rows.find((r) => r.includes(sel));
+    if (sel < 0 || !row) return {};
+    const cover = shown[sel]!.height * hk * COVER_RATIO;
+    return pulloutShifts(widths, row, sel, width, cover);
+  });
 
   let rowsEl: HTMLElement | undefined = $state();
   let press: { id: string; x: number; y: number } | null = null;
@@ -353,6 +370,7 @@
                   fit={fits[i] ?? null}
                   dataId={s.readingId}
                   dragging={dragId === s.readingId}
+                  shift={shifts[i] ?? 0}
                   selected={selectedId === s.readingId}
                   dim={highlight ? !highlight(s) : false}
                   lean={kind === 'reading'}
@@ -440,7 +458,9 @@
     align-items: center;
     gap: 6px;
   }
+  /* 꺼내 보기로 밀려난 책이 책장 밖으로 넘쳐 가로 스크롤이 생기지 않게 (위아래는 그대로) */
   .rows {
+    overflow-x: clip;
     display: flex;
     flex-direction: column;
     gap: 20px;
@@ -467,8 +487,9 @@
     align-items: flex-end;
     gap: 2px;
     height: calc(176 * var(--spine-hk) + 22px);
-    perspective: 1400px;
-    perspective-origin: 50% 20%;
+    /* 위에서 조금 내려다보는 시점: 꺼낸 책의 윗면(종이 결)이 보임. 꽂힌 책(z=0)은 그대로 */
+    perspective: 1100px;
+    perspective-origin: 50% -30%;
   }
   /* 빈 책장 안내는 가운데에 */
   .shelf > :global(.empty) {

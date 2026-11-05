@@ -159,3 +159,39 @@ export function fitTitle(
   const cols = Math.max(1, Math.floor(inner / (TITLE_FONT_MIN * LINE)));
   return { font: TITLE_FONT_MIN, cols, maxHeight: avail + pad, author: false };
 }
+
+/** 꺼내 보기 회전 각도(도). Book.svelte의 rotateY와 같은 값 */
+export const PULLOUT_DEG = 62;
+/** 표지 면 너비 = 책 높이 × 이 비율 (Book.svelte의 --cw) */
+export const COVER_RATIO = 0.68;
+
+/**
+ * 꺼내 보기에서 같은 줄 책들을 옆으로 밀 거리(px).
+ * 꺼낸 책은 왼쪽 모서리를 축으로 돌아 책등(폭 w)과 표지 면(폭 cover)이 비스듬히 보이므로,
+ * 차지하는 폭 w·cos + cover·sin(앞으로 나온 만큼 조금 더)에서 원래 폭을 뺀 만큼 오른쪽 책을 밉니다.
+ * 줄 끝에 자리가 모자라면 꺼낸 책과 왼쪽 책들을 그만큼 왼쪽으로 당겨 표지가 잘리지 않게 합니다.
+ * 결과: 책 번호 → 가로 이동(px). 고른 책이 이 줄에 없으면 빈 객체
+ */
+export function pulloutShifts(
+  widths: readonly number[],
+  row: readonly number[],
+  selected: number,
+  rowWidthPx: number,
+  coverPx: number,
+): Record<number, number> {
+  const at = row.indexOf(selected);
+  if (at < 0) return {};
+  const w = widths[selected] ?? 0;
+  const rad = (PULLOUT_DEG * Math.PI) / 180;
+  const footprint = w * Math.cos(rad) + coverPx * Math.sin(rad) * 1.05;
+  const push = Math.max(0, footprint - w) + 6;
+  const used =
+    row.reduce((n, i) => n + (widths[i] ?? 0), 0) + SPINE_GAP_PX * Math.max(0, row.length - 1);
+  const deficit = Math.max(0, used + push - rowWidthPx);
+  const out: Record<number, number> = {};
+  row.forEach((i, k) => {
+    const shift = k <= at ? -deficit : push - deficit;
+    if (Math.abs(shift) > 0.01) out[i] = Math.round(shift * 10) / 10;
+  });
+  return out;
+}
