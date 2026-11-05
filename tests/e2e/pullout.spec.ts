@@ -174,13 +174,32 @@ test('올해의 나이테와 별점순·쪽수순 정렬', async ({ page }) => {
   await expect.poll(titles).toEqual(['첫째 책', '둘째 책']);
 });
 
-test('움직임 줄이기: 회전 없이 들림 + 테두리만', async ({ page }) => {
+test('움직임 줄이기: 애니메이션 없이 꺼낸 3D 모습과 비켜 선 옆 책을 바로 보여 준다', async ({
+  page,
+}) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await loginAs(page, '#/', seed());
   const first = bookBtn(page, '첫째 책');
   await first.click();
-  const transform = await first.evaluate((el) => getComputedStyle(el).transform);
-  expect(transform).toBe('matrix(1, 0, 0, 1, 0, -14)');
+  // 전환 없이 바로 최종 자세(3D 회전)
+  const style = await first.evaluate((el) => {
+    const cs = getComputedStyle(el);
+    return { transform: cs.transform, duration: cs.transitionDuration };
+  });
+  expect(style.transform.startsWith('matrix3d(')).toBe(true);
+  expect(style.duration.split(',').every((d) => d.trim() === '0s')).toBe(true);
+  // 오른쪽 책은 비켜 섬
+  await expect(bookBtn(page, '둘째 책')).not.toHaveCSS('translate', 'none');
+});
+
+test('꺼내면 오른쪽 책들이 비켜 서고, 되돌리면 제자리', async ({ page }) => {
+  await loginAs(page, '#/', seed());
+  const second = bookBtn(page, '둘째 책');
+  await expect(second).toHaveCSS('translate', 'none');
+  await bookBtn(page, '첫째 책').click();
+  await expect(second).not.toHaveCSS('translate', 'none');
+  await page.keyboard.press('Escape');
+  await expect(second).toHaveCSS('translate', 'none');
 });
 
 test('설정의 움직임 줄이기를 켜면 이 기기에 기억한다', async ({ page }) => {

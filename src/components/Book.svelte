@@ -431,43 +431,16 @@
     clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 78%, 0 100%);
     transform: translateZ(1px);
   }
-  /* 움직임 줄이기(운영체제 설정 또는 앱 설정): 회전 없이 들림 + 강조색 테두리만 */
+  /* 움직임 줄이기(운영체제 설정 또는 앱 설정): 돌아가는·밀리는 움직임 없이 꺼낸 모습을 바로 보여 줌.
+     3D 자세 자체는 움직임이 아니라서 그대로 둡니다(결정 0017). */
   @media (prefers-reduced-motion: reduce) {
-    .book {
+    .book,
+    .spine {
       transition: none;
     }
-    .book[aria-pressed='true'] {
-      transform: translateY(-14px);
-      outline: 2px solid var(--accent);
-      outline-offset: 2px;
-    }
-    .book[aria-pressed='true'] .cover,
-    .book[aria-pressed='true'] .top {
-      visibility: hidden;
-    }
-    .book {
-      translate: none !important;
-    }
-    .book[aria-pressed='true'] .spine {
-      filter: none;
-    }
   }
-  :global([data-motion='reduce']) .book {
+  :global([data-motion='reduce']) .book,
+  :global([data-motion='reduce']) .spine {
     transition: none;
-  }
-  :global([data-motion='reduce']) .book[aria-pressed='true'] {
-    transform: translateY(-14px);
-    outline: 2px solid var(--accent);
-    outline-offset: 2px;
-  }
-  :global([data-motion='reduce']) .book[aria-pressed='true'] .cover,
-  :global([data-motion='reduce']) .book[aria-pressed='true'] .top {
-    visibility: hidden;
-  }
-  :global([data-motion='reduce']) .book {
-    translate: none !important;
-  }
-  :global([data-motion='reduce']) .book[aria-pressed='true'] .spine {
-    filter: none;
   }
 </style>
