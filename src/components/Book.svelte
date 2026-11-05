@@ -409,6 +409,11 @@
   .book:not([aria-pressed='true']) .top {
     visibility: hidden;
   }
+  /* 꺼낸 책은 옆 책들이 비켜 서므로, 보이는 표지·윗면을 눌러도 다시 꽂힘 (결정 0017) */
+  .book[aria-pressed='true'] .cover,
+  .book[aria-pressed='true'] .top {
+    pointer-events: auto;
+  }
   .cover b {
     font-family: var(--font-display);
     font-weight: var(--display-weight);

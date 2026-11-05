@@ -238,3 +238,30 @@ test('그해의 책이 세 권 다 찼으면 더 고르지 않고 안내한다',
   await expect(p.getByRole('status')).toContainText('세 권까지');
   expect(db.years[0]?.book_of_year).toEqual(['x', 'y', 'z']);
 });
+
+test('꺼낸 책의 표지를 다시 누르면 제자리로 꽂힌다 (책등을 다시 눌러도)', async ({ page }) => {
+  // 돌아 나오는 애니메이션 없이(움직임 줄이기) 같은 3D 자세에서 누름: 위치가 바로 정해져 타이밍에 흔들리지 않음
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await loginAs(page, '#/', seed());
+  const first = bookBtn(page, '첫째 책');
+  await first.click();
+  await expect(first).toHaveAttribute('aria-pressed', 'true');
+  const pressed = page.locator('.book[aria-pressed="true"]');
+  const clickCenter = async (part: string) => {
+    // 휴대폰 폭에서는 책을 고르면 상세 패널로 스크롤되므로 책을 다시 화면에
+    await first.scrollIntoViewIfNeeded();
+    const box = (await first.locator(part).boundingBox())!;
+    await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+  };
+  // 화면에 보이는 표지 면 가운데를 누름 → 다른 책을 고르지 않고 제자리로
+  await clickCenter('.cover');
+  await expect(first).toHaveAttribute('aria-pressed', 'false');
+  await expect(pressed).toHaveCount(0);
+
+  // 비스듬히 돌아간 책등을 눌러도 꽂힘
+  await first.click();
+  await expect(first).toHaveAttribute('aria-pressed', 'true');
+  await clickCenter('.spine');
+  await expect(first).toHaveAttribute('aria-pressed', 'false');
+  await expect(pressed).toHaveCount(0);
+});

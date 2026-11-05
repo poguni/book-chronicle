@@ -461,6 +461,9 @@
   /* 꺼내 보기로 밀려난 책이 책장 밖으로 넘쳐 가로 스크롤이 생기지 않게 (위아래는 그대로) */
   .rows {
     overflow-x: clip;
+    /* 자르는 경계는 본문 여백(16px 이상)까지 넓혀, 맨 앞 책을 꺼낼 때 비스듬히 돌아 나온 책등이 잘리지 않게 */
+    margin-inline: -16px;
+    padding-inline: 16px;
     display: flex;
     flex-direction: column;
     gap: 20px;
