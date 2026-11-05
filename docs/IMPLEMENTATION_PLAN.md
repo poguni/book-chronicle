@@ -56,7 +56,8 @@
 - [x] 문서 배치: `docs/Book Chronicle PRD.md`·`.html`, `docs/IMPLEMENTATION_PLAN.md`, `docs/decisions/` (파일 이름은 지금 이름 유지)
 - [x] 디자인 배치: `design/DESIGN.md`, `design/design-mockup-study.html`, `design/design-mockup-paper.html`
 - [x] 루트에 `CLAUDE.md`, `.gitignore`(`.env*`, `supabase/.env`, `node_modules`, `dist`) 추가
-- [ ] GitHub 저장소 설정에서 비밀 값 검사(secret scanning) 켜기
+- [x] GitHub 저장소 설정에서 비밀 값 검사(secret scanning) 켜기
+  - 2026-11-05 Secret Protection 사용, Push protection 켬(앱 주인 설정 화면으로 확인)
 - [x] 로컬에 Node.js LTS, Supabase CLI 설치 확인(로컬 Supabase를 쓰려면 Docker도)
   - Node.js v24 확인. Supabase CLI는 Phase 1에서 개발 의존성(`npx supabase`)으로 설치. Docker 없음 → RLS 테스트는 원격 프로젝트에서 테스트 계정으로
 
