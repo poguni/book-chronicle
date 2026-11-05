@@ -38,6 +38,15 @@ export function chartTheme(el: Element = document.documentElement) {
     muted: v('--muted'),
     line: v('--line'),
     surface: v('--card'),
+    accent: v('--accent'),
     font: v('--font-body') || 'sans-serif',
   };
+}
+
+/** #rrggbb에 투명도를 더합니다(연도별 추이에서 비교하지 않는 해를 옅게). */
+export function withAlpha(hex: string, alpha: number): string {
+  const m = /^#([0-9a-f]{6})$/i.exec(hex);
+  if (!m) return hex;
+  const n = parseInt(m[1]!, 16);
+  return `rgba(${n >> 16}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`;
 }

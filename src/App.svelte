@@ -104,9 +104,17 @@
       openDialog({ kind: 'edit', bookId: selection.spine.bookId, readingId: selection.reading.id });
   }
 
-  function toggleBookOfYear() {
+  // 세 권이 다 찼다는 안내는 그 기록을 꺼내 보는 동안만 보여 줍니다.
+  let fullFor = $state<string | null>(null);
+  const bookOfYearNotice = $derived(
+    fullFor !== null && fullFor === selectedId ? ko.detail.bookOfYearFull : null,
+  );
+  async function toggleBookOfYear() {
     const year = selection?.reading.year;
-    if (selection && year != null) void library.toggleBookOfYear(year, selection.spine.bookId);
+    if (!selection || year == null) return;
+    const id = selection.reading.id;
+    const r = await library.toggleBookOfYear(year, selection.spine.bookId);
+    fullFor = r === 'full' ? id : null;
   }
 
   /** 연도 나이테를 누르면 주소는 그대로 두고 그 연도 책장으로 스크롤만 합니다(결정 0001-12). */
@@ -190,6 +198,7 @@
         onclose={() => (detailOpen = false)}
         onedit={editSelected}
         onbookofyear={toggleBookOfYear}
+        {bookOfYearNotice}
         onselectreading={(id) => void selectReading(id)}
       />
     {/if}

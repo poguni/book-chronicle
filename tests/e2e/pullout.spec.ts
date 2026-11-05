@@ -137,7 +137,7 @@ test('그해의 책으로 정하고 뺄 수 있다', async ({ page }) => {
   await bookBtn(page, '둘째 책').click();
   const p = panel(page);
   await p.getByRole('button', { name: '그해의 책으로' }).click();
-  await expect(p.getByText('그해의 책', { exact: true })).toBeVisible();
+  await expect(p.getByText('그해의 책 1위', { exact: true })).toBeVisible();
   await expect(page.locator(`#y${year}`).getByText('그해의 책 · 둘째 책')).toBeVisible();
   expect(db.years).toHaveLength(1);
   expect(db.years[0]).toMatchObject({ year, book_of_year: ['b'] });
@@ -206,4 +206,16 @@ test.describe('900~1199px', () => {
     await page.keyboard.press('Escape');
     await expect(p).toBeHidden();
   });
+});
+
+test('그해의 책이 세 권 다 찼으면 더 고르지 않고 안내한다', async ({ page }) => {
+  const db = await loginAs(page, '#/', {
+    ...seed(),
+    years: [{ user_id: 'u', year, book_of_year: ['x', 'y', 'z'], one_liner: null, updated_at: T }],
+  });
+  await bookBtn(page, '둘째 책').click();
+  const p = panel(page);
+  await p.getByRole('button', { name: '그해의 책으로' }).click();
+  await expect(p.getByRole('status')).toContainText('세 권까지');
+  expect(db.years[0]?.book_of_year).toEqual(['x', 'y', 'z']);
 });

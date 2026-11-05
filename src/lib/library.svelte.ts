@@ -14,6 +14,7 @@ import { runPool } from './importer';
 import { makeTexture } from './texture';
 import { deleteReading, insertReading, listReadings, updateReading } from './data/readings';
 import { getSettings, updateMySettings, type SettingsRow } from './data/settings';
+import { moveRank, toggleRank } from './bookOfYear';
 import { listYears, setBookOfYear, setOneLiner } from './data/years';
 import {
   buildShelves,
@@ -330,13 +331,25 @@ class Library {
     return ok;
   }
 
+  /** 그해의 책 목록(고른 순서 = 순위) */
+  booksOfYear(year: number): string[] {
+    return this.years.find((y) => y.year === year)?.book_of_year ?? [];
+  }
+
   /**
-   * 그해의 책으로 정하거나(이미 그 책이면) 해제합니다. 그해의 책은 한 해에 1권(PRD F6, P0).
+   * 그해의 책으로 정하거나(이미 있으면) 뺍니다. 한 해에 3권까지, 고른 순서가 순위(PRD F6 P1).
+   * 세 권이 다 찼으면 저장하지 않고 'full'
    */
-  toggleBookOfYear(year: number, bookId: string): Promise<boolean> {
-    const current = this.years.find((y) => y.year === year)?.book_of_year ?? [];
-    const next = current[0] === bookId ? [] : [bookId];
-    return this.#save(() => setBookOfYear(year, next));
+  async toggleBookOfYear(year: number, bookId: string): Promise<boolean | 'full'> {
+    const { list, full } = toggleRank(this.booksOfYear(year), bookId);
+    if (full) return 'full';
+    return this.#save(() => setBookOfYear(year, list));
+  }
+
+  /** 그해의 책 순위 올리기(-1)·내리기(+1) */
+  moveBookOfYear(year: number, bookId: string, dir: -1 | 1): Promise<boolean> {
+    const list = moveRank(this.booksOfYear(year), bookId, dir);
+    return this.#save(() => setBookOfYear(year, list));
   }
 
   /** 한 줄 회고 저장(앞뒤 공백 정리, 비우면 null, 80자까지) */

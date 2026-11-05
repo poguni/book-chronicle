@@ -189,6 +189,25 @@ export function monthlySeries(
   return values;
 }
 
+/**
+ * 연도별 추이 (PRD F5 P1): 책이 있는 첫해부터 올해까지 해마다 권수와 쪽수(아는 책만).
+ * 사이의 빈 해는 0으로 채워 가로축이 끊기지 않게 합니다. 오래된 해가 앞.
+ */
+export function yearTrend(
+  shelves: readonly ShelfYear[],
+  currentYear: number,
+): { year: number; books: number; pages: number }[] {
+  const years = yearsWithBooks(shelves, currentYear);
+  const first = Math.min(...years);
+  const last = Math.max(...years);
+  const out: { year: number; books: number; pages: number }[] = [];
+  for (let y = first; y <= last; y++) {
+    const s = yearStats(shelves, y);
+    out.push({ year: y, books: s.books, pages: s.totalPages });
+  }
+  return out;
+}
+
 export const OTHER_CATEGORY = '기타';
 
 /**
@@ -224,14 +243,17 @@ export function categoryShares(
 }
 
 /**
- * 그해의 책 후보 (PRD F6): 고르지 않은 해에 별점이 가장 높은 책을 제안만 합니다.
- * 같으면 나중에 읽은 책. 별점이 하나도 없으면 null
+ * 그해의 책 후보 (PRD F6): 아직 고르지 않은 책 중 별점이 가장 높은 책을 제안만 합니다.
+ * 같으면 나중에 읽은 책. 별점 있는 책이 없으면 null. exclude: 이미 고른 책 ID
  */
 export function bookOfYearCandidate(
   shelves: readonly ShelfYear[],
   year: number,
+  exclude: readonly string[] = [],
 ): ShelfSpine | null {
-  const rated = (shelfOf(shelves, year)?.spines ?? []).filter((s) => s.rating !== null);
+  const rated = (shelfOf(shelves, year)?.spines ?? []).filter(
+    (s) => s.rating !== null && !exclude.includes(s.bookId),
+  );
   return rated.reduce<ShelfSpine | null>((best, s) => {
     if (!best) return s;
     if (s.rating! !== best.rating!) return s.rating! > best.rating! ? s : best;

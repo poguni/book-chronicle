@@ -1,6 +1,7 @@
 // 완독 기록을 연도별 책장으로 묶는 순수 함수 (PRD F4, 결정 0001-5·6·7)
 import type { Database } from './database.types';
 import type { ReadingStatus } from './bookForm';
+import { rankOf } from './bookOfYear';
 import { hueKey } from './spine/color';
 import { categoryAveragePages, effectivePages, spineHeight } from './spine/geometry';
 import { patternFor, type Pattern } from './spine/patterns';
@@ -37,6 +38,8 @@ export type ShelfSpine = {
   /** 끌어 옮겨 정한 책장 안 순서(없으면 null) */
   position: number | null;
   isBookOfYear: boolean;
+  /** 그해의 책 순위 1~3(아니면 null) */
+  bookOfYearRank: number | null;
 };
 
 /** year: 연도 책장 / unknown: 완독일 없는 완독(연도 미상) / reading: 읽는 중 / dropped: 중단한 책 */
@@ -110,7 +113,7 @@ export function buildShelves(
 ): ShelfYear[] {
   const bookById = new Map(books.map((b) => [b.id, b]));
   const averages = categoryAveragePages(books);
-  const bookOfYear = new Map(years.map((y) => [y.year, y.book_of_year[0] ?? null]));
+  const bookOfYear = new Map(years.map((y) => [y.year, y.book_of_year]));
 
   const groups = new Map<number | null, ShelfSpine[]>([[currentYear, []]]);
   const reading: ShelfSpine[] = [];
@@ -141,8 +144,13 @@ export function buildShelves(
       rating: r.rating === null ? null : Number(r.rating),
       createdAt: r.created_at,
       position: r.shelf_position ?? null,
-      isBookOfYear: status === 'finished' && r.year !== null && bookOfYear.get(r.year) === book.id,
+      isBookOfYear: false,
+      bookOfYearRank: null,
     };
+    const rank =
+      status === 'finished' && r.year !== null ? rankOf(bookOfYear.get(r.year), book.id) : null;
+    spineItem.isBookOfYear = rank !== null;
+    spineItem.bookOfYearRank = rank;
     if (status === 'reading') reading.push(spineItem);
     else if (status === 'dropped') dropped.push(spineItem);
     else groups.set(r.year, [...(groups.get(r.year) ?? []), spineItem]);
@@ -156,7 +164,7 @@ export function buildShelves(
 
   const shelf = (kind: ShelfKind, year: number | null, list: ShelfSpine[]): ShelfYear => {
     const spines = sortSpines(list, 'date');
-    const boyId = year === null ? null : bookOfYear.get(year);
+    const boyId = year === null ? null : (bookOfYear.get(year)?.[0] ?? null);
     return {
       kind,
       year,

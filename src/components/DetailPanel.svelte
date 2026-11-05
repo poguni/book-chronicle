@@ -29,6 +29,7 @@
     onclose,
     onedit,
     onbookofyear,
+    bookOfYearNotice = null,
     onselectreading,
   }: {
     today: Date;
@@ -39,6 +40,8 @@
     onclose: () => void;
     onedit: () => void;
     onbookofyear: () => void;
+    /** 그해의 책을 더 고를 수 없을 때의 안내 */
+    bookOfYearNotice?: string | null;
     onselectreading: (readingId: string) => void;
   } = $props();
 
@@ -95,7 +98,9 @@
           {/if}
         </div>
         <div class="sel-info">
-          {#if sel.isBookOfYear}<span class="tag">{ko.detail.bookOfYearTag}</span>{/if}
+          {#if sel.bookOfYearRank !== null}<span class="tag"
+              >{ko.detail.bookOfYearRankTag(sel.bookOfYearRank)}</span
+            >{/if}
           <h3 class="display">{sel.title}</h3>
           {#if sel.author}<span class="author">{sel.author}</span>{/if}
           <Stars value={sel.rating} />
@@ -159,6 +164,7 @@
           </button>
         {/if}
       </div>
+      {#if bookOfYearNotice}<p class="notice" role="status">{bookOfYearNotice}</p>{/if}
     {:else}
       <EmptyState message={ko.detail.noSelection} />
     {/if}
@@ -371,6 +377,11 @@
       var(--line) 31px,
       var(--line) 32px
     );
+  }
+  .notice {
+    margin: 0;
+    font-size: 13px;
+    color: var(--muted);
   }
   .row-btns {
     display: flex;

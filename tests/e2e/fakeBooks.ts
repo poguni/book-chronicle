@@ -57,6 +57,8 @@ export const SAMPLE_BOOKS = [
 
 export type FakeBooks = {
   calls: Record<string, unknown>[];
+  /** 미리 깨우기(OPTIONS) 요청 수 */
+  warmups: number;
   uploads: { path: string; jpeg: boolean }[];
 };
 
@@ -64,13 +66,16 @@ export async function fakeBooks(
   page: Page,
   opts: { status?: number; error?: string; files?: Record<string, Buffer> } = {},
 ): Promise<FakeBooks> {
-  const state: FakeBooks = { calls: [], uploads: [] };
+  const state: FakeBooks = { calls: [], warmups: 0, uploads: [] };
   const cover = twoTonePng([31, 35, 64], [233, 225, 207]);
   const stored = new Map<string, Buffer>(Object.entries(opts.files ?? {}));
 
   await page.route('**/functions/v1/bookchronicle-books', async (route) => {
     const req = route.request();
-    if (req.method() === 'OPTIONS') return route.fulfill({ status: 204 });
+    if (req.method() === 'OPTIONS') {
+      state.warmups++;
+      return route.fulfill({ status: 204, headers: { 'Access-Control-Allow-Origin': '*' } });
+    }
     const body = req.postDataJSON() as Record<string, unknown>;
     state.calls.push(body);
     if (opts.status) {

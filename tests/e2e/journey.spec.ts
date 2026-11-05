@@ -35,7 +35,7 @@ test('로그인부터 백업까지 한 번에', async ({ page }) => {
   const panel = page.getByRole('complementary', { name: '선택한 책과 올해 요약' });
   await expect(panel.getByRole('heading', { name: '작별하지 않는다' })).toBeVisible();
   await panel.getByRole('button', { name: '그해의 책으로' }).click();
-  await expect(panel.getByText('그해의 책', { exact: true })).toBeVisible();
+  await expect(panel.getByText('그해의 책 1위', { exact: true })).toBeVisible();
 
   // 연도 비교
   await go(page, '연도 비교');
@@ -49,7 +49,7 @@ test('로그인부터 백업까지 한 번에', async ({ page }) => {
     page.getByRole('main').getByRole('heading', { name: `${y}년 연말 회고` }),
   ).toBeVisible();
   await expect(
-    page.getByRole('main').getByRole('button', { name: /작별하지 않는다/ }),
+    page.getByRole('main').getByRole('button', { name: /^작별하지 않는다/ }),
   ).toHaveAttribute('aria-pressed', 'true');
   const [png] = await Promise.all([
     page.waitForEvent('download'),

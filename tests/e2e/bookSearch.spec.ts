@@ -162,3 +162,17 @@ test('앱 주인이 아니면 검색을 쓸 수 없다고 알려 준다', async 
   // 권한 문제는 다시 시도하지 않는다
   expect(api.calls).toHaveLength(1);
 });
+
+test('책 찾기 칸에 입력을 시작하면 검색 함수를 한 번만 미리 깨운다', async ({ page }) => {
+  const api = await fakeBooks(page);
+  await loginAs(page);
+  const dialog = await openAdd(page);
+  expect(api.warmups).toBe(0); // 대화 상자를 열기만 해서는 보내지 않음
+  const search = dialog.getByRole('searchbox', { name: '책 찾기' });
+  await search.pressSequentially('작별', { delay: 30 });
+  await expect(dialog.getByText('2권을 찾았어요')).toBeVisible();
+  await search.fill('');
+  await search.pressSequentially('파이썬', { delay: 30 });
+  await expect.poll(() => api.warmups).toBe(1);
+  expect(api.calls.every((c) => c.action !== undefined)).toBe(true);
+});

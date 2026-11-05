@@ -51,6 +51,22 @@ async function call(body: Record<string, unknown>): Promise<Response> {
   throw last;
 }
 
+const WARM_INTERVAL_MS = 5 * 60_000;
+let lastWarm = -Infinity;
+
+/**
+ * 검색 함수 미리 깨우기 (PRD 5.9 P1): 책 찾기 칸에 입력을 시작하면 콜드 스타트를 줄이려고
+ * OPTIONS 요청을 한 번 보냅니다. 함수가 로그인 확인·외부 API 호출 없이 바로 204로 답합니다.
+ * 5분 안에는 다시 보내지 않고, 실패는 무시합니다.
+ */
+export function warmUp(now = Date.now()): boolean {
+  if (now - lastWarm < WARM_INTERVAL_MS) return false;
+  lastWarm = now;
+  const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/${FUNCTION}`;
+  void fetch(url, { method: 'OPTIONS' }).catch(() => {});
+  return true;
+}
+
 /** 제목·저자 검색 (최대 20건, 카카오) */
 export async function searchBooks(q: string): Promise<BookInfo[]> {
   const res = await call({ action: 'search', q });

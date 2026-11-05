@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { BookApiError, lookupBook, searchBooks, type BookInfo } from '../lib/bookApi';
+  import { BookApiError, lookupBook, searchBooks, warmUp, type BookInfo } from '../lib/bookApi';
   import { cleanAuthor, cleanTitle } from '../lib/bookMap';
   import { ko } from '../lib/i18n/ko';
   import { toIsbn13 } from '../lib/isbn';
@@ -59,6 +59,7 @@
   }
 
   function oninput() {
+    warmUp();
     clearTimeout(timer);
     const q = query.trim();
     if (q.length < 2 && !toIsbn13(q)) {

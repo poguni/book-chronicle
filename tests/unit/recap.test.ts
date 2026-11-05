@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
+import { moveRank, toggleRank } from '../../src/lib/bookOfYear';
 import {
   CARD_SIZES,
+  cardCategories,
   cardColors,
   cardLayout,
   dominantColor,
@@ -16,6 +18,7 @@ import {
   OTHER_CATEGORY,
   yearsWithBooks,
   yearStats,
+  yearTrend,
 } from '../../src/lib/stats';
 import { yearStyle } from '../../src/lib/yearStyle';
 
@@ -107,6 +110,19 @@ describe('연도 비교 통계 (PRD F5)', () => {
       averagePages: null,
       thickest: null,
     });
+  });
+
+  it('연도별 추이: 첫해부터 올해까지, 빈 해는 0, 오래된 해가 앞', () => {
+    expect(yearTrend(shelves, 2026)).toEqual([
+      { year: 2025, books: 2, pages: 500 },
+      { year: 2026, books: 3, pages: 600 },
+    ]);
+    expect(yearTrend(shelves, 2028).map((t) => [t.year, t.books])).toEqual([
+      [2025, 2],
+      [2026, 3],
+      [2027, 0],
+      [2028, 0],
+    ]);
   });
 
   it('증감: 차이와 %', () => {
@@ -205,5 +221,59 @@ describe('12월 안내 (PRD F6)', () => {
     expect(decemberNoticeDue(new Date(2026, 11, 5), { ...p, booksThisYear: 0 })).toBe(false);
     expect(decemberNoticeDue(new Date(2026, 11, 5), { ...p, bookOfYearChosen: true })).toBe(false);
     expect(decemberNoticeDue(new Date(2026, 11, 5), { ...p, seen: true })).toBe(false);
+  });
+});
+
+describe('그해의 책 순위 (PRD F6 P1)', () => {
+  it('고른 순서가 순위, 빼면 아래가 올라옴, 세 권이 차면 그대로', () => {
+    expect(toggleRank([], 'a')).toEqual({ list: ['a'], full: false });
+    expect(toggleRank(['a', 'b', 'c'], 'b')).toEqual({ list: ['a', 'c'], full: false });
+    expect(toggleRank(['a', 'b', 'c'], 'd')).toEqual({ list: ['a', 'b', 'c'], full: true });
+  });
+
+  it('순위 올리기·내리기, 끝에서는 그대로', () => {
+    expect(moveRank(['a', 'b', 'c'], 'c', -1)).toEqual(['a', 'c', 'b']);
+    expect(moveRank(['a', 'b', 'c'], 'a', 1)).toEqual(['b', 'a', 'c']);
+    expect(moveRank(['a', 'b'], 'a', -1)).toEqual(['a', 'b']);
+    expect(moveRank(['a', 'b'], 'z', 1)).toEqual(['a', 'b']);
+  });
+
+  it('책등에 순위가 붙고, 책장 머리는 1위', () => {
+    const s = buildShelves(
+      [book('a'), book('b')],
+      [reading('1', 'a', '2026-01-10'), reading('2', 'b', '2026-02-10')],
+      [{ user_id: 'u', year: 2026, book_of_year: ['b', 'a'], one_liner: null, updated_at: T }],
+      {},
+      2026,
+    );
+    const y = s.find((x) => x.year === 2026)!;
+    expect(y.spines.map((sp) => [sp.bookId, sp.bookOfYearRank])).toEqual([
+      ['a', 2],
+      ['b', 1],
+    ]);
+    expect(y.bookOfYearTitle).toBe('책 b');
+  });
+
+  it('후보는 이미 고른 책을 뺀다', () => {
+    expect(bookOfYearCandidate(shelves, 2026, ['b'])?.bookId).toBe('a');
+    expect(bookOfYearCandidate(shelves, 2026, ['a', 'b'])).toBeNull();
+  });
+});
+
+describe('회고 카드 분야형', () => {
+  it('많은 순 상위 N + 나머지·분야 없음은 기타', () => {
+    const cats = ['소설', '소설', '과학', '역사', '역사', '역사', null, '수학'];
+    expect(cardCategories(cats, '기타', 2)).toEqual([
+      { name: '역사', count: 3 },
+      { name: '소설', count: 2 },
+      { name: '기타', count: 3 },
+    ]);
+    expect(cardCategories(['과학'], '기타')).toEqual([{ name: '과학', count: 1 }]);
+    // 같은 권수면 먼저 나온 분야가 앞(카드의 '가장 많이 읽은 분야'와 어긋나지 않게)
+    expect(cardCategories(['인문', '경제', '경제', '인문', '과학'], '기타', 1)).toEqual([
+      { name: '인문', count: 2 },
+      { name: '기타', count: 3 },
+    ]);
+    expect(cardCategories([], '기타')).toEqual([]);
   });
 });

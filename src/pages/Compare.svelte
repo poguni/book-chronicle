@@ -12,6 +12,7 @@
     OTHER_CATEGORY,
     yearsWithBooks,
     yearStats,
+    yearTrend,
     type YearStats,
   } from '../lib/stats';
   import { yearStyle } from '../lib/yearStyle';
@@ -51,6 +52,14 @@
     selected.map((y) => ({ year: y, values: monthlySeries(spinesOf(y), metric, cumulative) })),
   );
   const shares = $derived(categoryShares(library.shelves, selected));
+  const trend = $derived(yearTrend(library.shelves, currentYear));
+  let trendMetric = $state<'books' | 'pages'>('books');
+  const trendLabel = $derived(
+    trendMetric === 'books' ? ko.compare.metricBooks : ko.compare.metricPages,
+  );
+  const trendUnit = $derived(
+    trendMetric === 'books' ? ko.compare.unit.books : ko.compare.unit.pages,
+  );
   const styleOf = (y: number) => yearStyle(allYears, y);
 
   // ── 지표 카드
@@ -229,6 +238,63 @@
             grid: { display: false },
             ticks: { color: t.text },
             border: { color: t.line },
+          },
+        },
+      },
+    });
+    return () => chart.destroy();
+  };
+
+  // 연도별 추이: 한 가지 값이라 색 하나. 비교 중인 연도는 진하게, 나머지는 옅게
+  const trendChart: Attachment<HTMLCanvasElement> = (canvas) => {
+    if (!charts) return;
+    void prefs.theme;
+    const t = charts.chartTheme();
+    const faded = charts.withAlpha(t.accent, 0.35);
+    const chart = new charts.Chart(canvas, {
+      type: 'bar',
+      data: {
+        labels: trend.map((r) => String(r.year)),
+        datasets: [
+          {
+            label: trendLabel,
+            data: trend.map((r) => r[trendMetric]),
+            backgroundColor: trend.map((r) => (selected.includes(r.year) ? t.accent : faded)),
+            borderRadius: 4,
+            borderSkipped: 'bottom',
+            maxBarThickness: 28,
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: reduceMotion() ? false : { duration: 300 },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: t.surface,
+            titleColor: t.text,
+            bodyColor: t.text,
+            borderColor: t.line,
+            borderWidth: 1,
+            callbacks: {
+              title: (items) => `${items[0]?.label ?? ''}년`,
+              label: (ctx) => ` ${formatNumber(Number(ctx.parsed.y))}${trendUnit}`,
+            },
+          },
+        },
+        scales: {
+          x: {
+            grid: { display: false },
+            ticks: { color: t.muted, maxRotation: 0, autoSkipPadding: 6 },
+            border: { color: t.line },
+          },
+          y: {
+            beginAtZero: true,
+            ticks: { color: t.muted, precision: 0 },
+            grid: { color: t.line },
+            border: { display: false },
           },
         },
       },
@@ -426,6 +492,62 @@
         {/key}
       </div>
     {/if}
+  {/if}
+</section>
+
+<section class="card" aria-labelledby="trend-title">
+  <div class="card-h">
+    <h2 id="trend-title" class="display">{ko.compare.trend} {trendLabel}</h2>
+    <div class="chips" role="group" aria-label={ko.compare.trend}>
+      <button
+        type="button"
+        class="chip"
+        aria-pressed={trendMetric === 'books'}
+        onclick={() => (trendMetric = 'books')}>{ko.compare.metricBooks}</button
+      >
+      <button
+        type="button"
+        class="chip"
+        aria-pressed={trendMetric === 'pages'}
+        onclick={() => (trendMetric = 'pages')}>{ko.compare.metricPages}</button
+      >
+    </div>
+  </div>
+  {#if asTable}
+    <div class="table-wrap">
+      <table>
+        <caption class="sr"
+          >{ko.compare.trendLabel(trendLabel, trend[0]!.year, trend.at(-1)!.year)}</caption
+        >
+        <thead>
+          <tr>
+            <th scope="col">{ko.compare.tableYear}</th>
+            <th scope="col">{ko.compare.metricBooks}</th>
+            <th scope="col">{ko.compare.metricPages}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {#each trend as r (r.year)}
+            <tr>
+              <th scope="row">{r.year}</th>
+              <td>{formatNumber(r.books)}</td>
+              <td>{formatNumber(r.pages)}</td>
+            </tr>
+          {/each}
+        </tbody>
+      </table>
+    </div>
+  {:else if charts}
+    <p class="hint">{ko.compare.trendHint}</p>
+    <div
+      class="plot line"
+      role="img"
+      aria-label={ko.compare.trendLabel(trendLabel, trend[0]!.year, trend.at(-1)!.year)}
+    >
+      {#key `${selected.join()}-${trendMetric}`}
+        <canvas {@attach trendChart} aria-hidden="true"></canvas>
+      {/key}
+    </div>
   {/if}
 </section>
 
