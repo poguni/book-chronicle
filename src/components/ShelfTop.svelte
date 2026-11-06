@@ -67,23 +67,31 @@
       <GoalProgress {year} books={summary.books} {goal} onsave={onsavegoal} />
     </div>
   </div>
+  <!-- 윗줄: 검색(+ 지난해 접기), 아랫줄: 정렬 칩 + 강조 보기. 두 줄의 좌우 끝을 맞춤 -->
   <div class="tools">
-    <label class="search">
-      <Icon name="search" />
-      <span class="sr">{ko.top.searchLabel}</span>
-      <input type="search" placeholder={ko.top.searchPlaceholder} bind:value={query} />
-    </label>
-    <div class="sort" role="group" aria-label={ko.top.sortLabel}>
-      {#each sorts as s (s.value)}
-        <button
-          type="button"
-          class="chip"
-          aria-pressed={sort === s.value}
-          onclick={() => (sort = s.value)}>{s.label}</button
-        >
-      {/each}
+    <div class="line">
+      <label class="search">
+        <Icon name="search" />
+        <span class="sr">{ko.top.searchLabel}</span>
+        <input type="search" placeholder={ko.top.searchPlaceholder} bind:value={query} />
+      </label>
+      {#if canFold}
+        <button type="button" class="chip" aria-pressed={allFolded} onclick={onfoldpast}>
+          {allFolded ? ko.top.unfoldAll : ko.top.foldPast}
+        </button>
+      {/if}
     </div>
-    <div class="view">
+    <div class="line controls">
+      <div class="sort" role="group" aria-label={ko.top.sortLabel}>
+        {#each sorts as s (s.value)}
+          <button
+            type="button"
+            class="chip"
+            aria-pressed={sort === s.value}
+            onclick={() => (sort = s.value)}>{s.label}</button
+          >
+        {/each}
+      </div>
       <label class="hl">
         <span class="sr">{ko.top.highlight}</span>
         <select bind:value={highlight} aria-label={ko.top.highlight}>
@@ -94,11 +102,6 @@
           {/each}
         </select>
       </label>
-      {#if canFold}
-        <button type="button" class="chip" aria-pressed={allFolded} onclick={onfoldpast}>
-          {allFolded ? ko.top.unfoldAll : ko.top.foldPast}
-        </button>
-      {/if}
     </div>
   </div>
 </div>
@@ -145,13 +148,17 @@
   }
   .tools {
     display: flex;
-    flex-wrap: wrap;
+    flex-direction: column;
     gap: 8px;
-    flex: 0 1 560px;
-    justify-content: flex-end;
+    flex: 0 1 680px;
+    min-width: 0;
+  }
+  .line {
+    display: flex;
+    gap: 6px;
   }
   .search {
-    flex: 1 1 260px;
+    flex: 1 1 auto;
     display: flex;
     align-items: center;
     gap: 10px;
@@ -180,11 +187,15 @@
   .search input::placeholder {
     color: var(--muted);
   }
+  /* 정렬 칩은 남는 폭을 나눠 가져 아랫줄이 검색창과 같은 폭이 됨 */
   .sort {
+    flex: 1 1 auto;
     display: flex;
-    flex-wrap: wrap;
-    justify-content: flex-end;
     gap: 4px;
+  }
+  .sort .chip {
+    flex: 1 1 auto;
+    padding: 0 10px;
   }
   .chip {
     height: 46px;
@@ -202,15 +213,12 @@
     color: var(--text);
     font-weight: 700;
   }
-  .view {
+  .hl {
+    flex: none;
     display: flex;
-    flex-wrap: wrap;
-    gap: 4px;
-    justify-content: flex-end;
-    width: 100%;
   }
   .hl select {
-    height: 40px;
+    height: 46px;
     padding: 0 10px;
     border-radius: var(--radius-m);
     border: 1px solid var(--line);
@@ -219,27 +227,30 @@
     font-size: 13px;
     max-width: 220px;
   }
-  .view .chip {
-    height: 40px;
-  }
   @media (max-width: 899px) {
-    .view {
-      justify-content: flex-start;
-    }
     h1 {
       font-size: 24px;
     }
     .tools {
       flex-basis: 100%;
     }
-    /* 정렬 칩 6개: 3칸씩 두 줄 */
+    /* 정렬 칩 6개는 3칸씩 두 줄, 강조 보기는 그 아래 한 줄 가득 */
+    .controls {
+      flex-wrap: wrap;
+    }
     .sort {
       width: 100%;
       display: grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
     }
-    .sort .chip {
+    .sort .chip,
+    .hl select {
       height: 40px;
+    }
+    .hl,
+    .hl select {
+      flex: 1 1 100%;
+      max-width: none;
     }
   }
 </style>
