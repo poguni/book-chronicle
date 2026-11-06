@@ -21,7 +21,7 @@ for (const theme of ['study', 'paper'] as const) {
     const found = await violations(page, '로그인');
 
     await loginAs(page, '#/', yearsSeed({ [y]: 6, [y - 1]: 4 }));
-    for (const hash of ['#/', '#/compare', '#/recap', '#/import', '#/settings']) {
+    for (const hash of ['#/', '#/compare', '#/recap', '#/list', '#/import', '#/settings']) {
       await page.goto(`./${hash}`);
       await expect(page.locator('h1').first()).toBeVisible();
       await page.waitForTimeout(600);

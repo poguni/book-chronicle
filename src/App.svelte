@@ -48,7 +48,8 @@
     if (!reading || !spine) return null;
     return { spine, reading, readings: sortReadings(library.readingsOf(reading.book_id)) };
   });
-  const withDetail = $derived(router.route.name === 'shelves');
+  // 상세 패널: 책장과 전체 목록에서 (목록의 줄을 누르면 그 책으로 바뀜, 결정 0020)
+  const withDetail = $derived(router.route.name === 'shelves' || router.route.name === 'list');
 
   // 로그인하면 settings 행을 만들고(이미 있으면 그대로) 책장을 불러옵니다. 로그아웃하면 비웁니다.
   $effect(() => {
@@ -169,7 +170,14 @@
       {:else if router.route.name === 'recap'}
         <Recap year={router.route.year} />
       {:else if router.route.name === 'list'}
-        <List />
+        <List
+          shelves={library.shelves}
+          loadState={library.state}
+          {selectedId}
+          onpick={pick}
+          onaddbook={addBook}
+          onretry={() => library.load()}
+        />
       {:else if router.route.name === 'import'}
         <Import />
       {:else if router.route.name === 'settings'}
