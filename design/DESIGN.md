@@ -69,7 +69,7 @@
 | `--accent-soft` | 강조 옅은 배경(hover) | 황동 16% | 남색 10% |
 | `--shelf-back` | 책장 뒤판 | `#2A2019` | 없음(벽에 단 선반) |
 | `--plank` / `--plank-edge` | 선반 판 / 모서리 | `#6B4529` / `#8A5A35` 호두나무 | `#E4D5BA` / `#CDB894` 자작나무 |
-| `--ribbon` | 그해의 책 책갈피 끈 | `#D4A55A` | `#2F4A7A` |
+| `--trophy` (공통 토큰) | 그해의 책 트로피 배지 | `#FFC22E` | `#FFC22E` |
 | `--bar` / `--bar-off` | 월별 막대 / 아직 오지 않은 달 | `#8C6B45` / `#3A2D22` | `#9AA6BC` / `#DED6C8` |
 
 ### 색 사용 규칙
@@ -159,7 +159,7 @@
     <span class="a">저자</span> | <span class="mk"></span>
   </span>
   <span class="face cover">표지</span>  ← 오른쪽 옆면(평소엔 안쪽으로 90° 접혀 있음)
-  <span class="ribbon"></span>          ← 그해의 책일 때만
+  <span class="trophy"></span>          ← 그해의 책일 때만
 </button>
 ```
 - 두께: `clamp(8px, 쪽수 × --spine-k, 9cqw)`
@@ -188,7 +188,7 @@
 - 실제 앱에서는 흐림 그림을 등록 시 64×256px 이미지로 미리 만들어 둡니다(PRD 6.5).
 
 ### 6.5 그해의 책 표시
-- 책등 아래로 늘어진 책갈피 끈: 폭 6px, 길이 28px, 끝이 V자(`clip-path`), 색 `--ribbon`.
+- 책등 위 끝 가운데에 반쯤 걸친 트로피 배지(결정 0021): 지름 20px 원, 밝은 금색(`--trophy`, 위쪽 빛 `--trophy-hi`) 바탕에 진한 황토색(`--trophy-ink`) 트로피 아이콘, 크림색 테두리(`--trophy-ring`)와 옅은 그림자. 두 테마 공통.
 - 연도 머리글 오른쪽에 책갈피 아이콘 + "그해의 책 · 제목".
 
 ---

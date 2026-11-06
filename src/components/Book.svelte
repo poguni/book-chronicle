@@ -143,7 +143,18 @@
   </span>
   <!-- 꺼냈을 때 보이는 윗면: 책 두께만큼의 종이 결 (책 1,000권에서도 가볍게, 꺼낸 책에만) -->
   {#if selected}<span class="face top" aria-hidden="true"></span>{/if}
-  {#if spine.isBookOfYear}<span class="ribbon" aria-hidden="true"></span>{/if}
+  <!-- 그해의 책: 책등 위 끝에 트로피 배지 (결정 0021). 책과 함께 들리고 돌아감 -->
+  {#if spine.isBookOfYear}
+    <span class="trophy" aria-hidden="true">
+      <svg viewBox="0 0 24 24">
+        <path d="M7 3h10v6a5 5 0 0 1-10 0zM10.6 13.6h2.8V17h-2.8zM8 17.5h8V21H8z" />
+        <path
+          class="handle"
+          d="M7.2 5.2H4.5v1.3A3.6 3.6 0 0 0 8 10.1M16.8 5.2h2.7v1.3A3.6 3.6 0 0 1 16 10.1"
+        />
+      </svg>
+    </span>
+  {/if}
 </button>
 
 <style>
@@ -425,16 +436,35 @@
     opacity: 0.85;
   }
   /* 그해의 책: 책갈피 끈 (DESIGN 6.5) */
-  .ribbon {
+  /* 그해의 책 트로피 배지: 책등 위 끝 가운데에 반쯤 걸쳐 놓음. 어떤 책등 색에서도 보이게 밝은 테두리 */
+  .trophy {
     position: absolute;
-    bottom: -12px;
+    top: -10px;
     left: 50%;
-    margin-left: -3px;
-    width: 6px;
-    height: 28px;
-    background: var(--ribbon);
-    clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 78%, 0 100%);
-    transform: translateZ(1px);
+    width: 20px;
+    height: 20px;
+    margin-left: -10px;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    background: radial-gradient(circle at 35% 30%, var(--trophy-hi), var(--trophy) 65%);
+    color: var(--trophy-ink);
+    box-shadow:
+      0 0 0 1.5px var(--trophy-ring),
+      0 2px 4px rgba(0, 0, 0, 0.3);
+    transform: translateZ(2px);
+    pointer-events: none;
+  }
+  .trophy svg {
+    width: 13px;
+    height: 13px;
+    fill: currentColor;
+  }
+  .trophy .handle {
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
   }
   /* 움직임 줄이기(운영체제 설정 또는 앱 설정): 돌아가는·밀리는 움직임 없이 꺼낸 모습을 바로 보여 줌.
      3D 자세 자체는 움직임이 아니라서 그대로 둡니다(결정 0017). */

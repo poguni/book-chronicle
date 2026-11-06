@@ -14,4 +14,9 @@
   --success: #7fb069; /* 저장됨 점 (DESIGN 3.1) */
   /* 로그인 배경 그림(book-chronicle-splash-screen.webp)의 바탕색: 그림이 덮지 못한 곳을 채움 */
   --splash-bg: #f9e7ca;
+  /* 그해의 책 트로피 배지: 두 테마 모두 밝은 금색 (결정 0021) */
+  --trophy: #ffc22e;
+  --trophy-hi: #fff3b0;
+  --trophy-ink: #8a5300;
+  --trophy-ring: #fffaf0;
 }
