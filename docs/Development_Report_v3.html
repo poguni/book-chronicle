@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>북크로니클 개발 보고서 v3</title>
+<style>
+  :root { --sidebar-w: 260px; --accent: #4F46E5; --text: #1f2430; --muted: #6b7280; --bg: #ffffff; --panel: #f7f7fb; --border: #e5e7eb; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: -apple-system, "Segoe UI", "Noto Sans KR", sans-serif; color: var(--text); background: var(--bg); line-height: 1.65; }
+  .layout { display: flex; min-height: 100vh; }
+  nav.sidebar { position: sticky; top: 0; align-self: flex-start; width: var(--sidebar-w); flex-shrink: 0; height: 100vh; overflow-y: auto; padding: 24px 16px; background: var(--panel); border-right: 1px solid var(--border); }
+  nav.sidebar h1 { font-size: 15px; margin: 0 0 4px; }
+  nav.sidebar .meta { font-size: 12px; color: var(--muted); margin-bottom: 16px; }
+  nav.sidebar a { display: block; padding: 7px 10px; margin: 2px 0; font-size: 13.5px; color: var(--text); text-decoration: none; border-radius: 8px; }
+  nav.sidebar a:hover { background: #eceafd; }
+  nav.sidebar a.active { background: var(--accent); color: #fff; }
+  main { flex: 1; min-width: 0; padding: 40px 48px; max-width: 860px; }
+  main section { margin-bottom: 48px; scroll-margin-top: 24px; }
+  main h2 { font-size: 22px; border-bottom: 2px solid var(--border); padding-bottom: 8px; }
+  main h3 { font-size: 17px; color: var(--accent); }
+  main table { border-collapse: collapse; width: 100%; margin: 12px 0; display: block; overflow-x: auto; }
+  main th, main td { border: 1px solid var(--border); padding: 8px 10px; font-size: 14px; text-align: left; vertical-align: top; }
+  main th { background: var(--panel); }
+  main code { background: #f1f1f5; padding: 1px 5px; border-radius: 4px; font-size: 0.9em; }
+  main pre { background: #1f2430; color: #eee; padding: 14px; border-radius: 8px; overflow-x: auto; }
+  main pre code { background: none; padding: 0; color: inherit; }
+  main a { color: var(--accent); }
+  .doc-title { font-size: 26px; margin: 0 0 8px; }
+  .doc-meta { color: var(--muted); font-size: 14px; margin: 0 0 32px; }
+  @media (max-width: 800px) {
+    .layout { flex-direction: column; }
+    nav.sidebar { position: relative; width: 100%; height: auto; border-right: none; border-bottom: 1px solid var(--border); }
+    main { padding: 24px 16px; }
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+  <nav class="sidebar" id="sidebar">
+    <h1>북크로니클</h1>
+    <div class="meta">개발 보고서 v3 · 2026-11-06</div>
+    <a href="#sec-1">1. 개요</a>
+    <a href="#sec-2">2. 목표 및 배경</a>
+    <a href="#sec-3">3. 주요 기능</a>
+    <a href="#sec-4">4. 기술 스택 및 아키텍처</a>
+    <a href="#sec-5">5. 개발 과정 (타임라인)</a>
+    <a href="#sec-6">6. 주요 의사결정과 이유</a>
+    <a href="#sec-7">7. 문제 해결 기록</a>
+    <a href="#sec-8">8. 보안/성능 고려사항</a>
+    <a href="#sec-9">9. 테스트 및 검증</a>
+    <a href="#sec-10">10. 배포</a>
+    <a href="#sec-11">11. 알려진 한계</a>
+    <a href="#sec-12">12. 향후 개선 아이디어 / 업데이트 계획</a>
+    <a href="#sec-13">13. 이전 버전(v2) 이후 변경 사항</a>
+    <a href="#sec-14">부록. 결정 기록 목록</a>
+  </nav>
+  <main id="content">
+    <h1 class="doc-title">북크로니클(Book Chronicle) 개발 보고서 (v3)</h1>
+    <p class="doc-meta">작성일: 2026-11-06 · 버전: v3 · 이전 버전: v2 (docs/Development_Report_v2.md) · 기준 커밋: <code>ad14343</code> (그해의 책 트로피 배지, 배포 확인)</p>
+    <section id="sec-1"><h2>1. 개요</h2>
+<table><thead><tr><th>항목</th><th>내용</th></tr></thead><tbody><tr><td>앱 이름</td><td>북크로니클(Book Chronicle)</td></tr><tr><td>한 줄 소개</td><td>해마다 읽은 책을 책등이 꽂힌 책장으로 보여 주는 개인용 독서 연대기 웹 앱</td></tr><tr><td>대상 사용자</td><td>앱 주인 1명. 데스크톱 브라우저에서 기록하고, 스마트폰에서 로그인해 같은 책장을 확인</td></tr><tr><td>배포 주소</td><td><a href="https://poguni.github.io/book-chronicle/">https://poguni.github.io/book-chronicle/</a></td></tr><tr><td>저장소</td><td><code>poguni/book-chronicle</code> (공개)</td></tr><tr><td>개발 기간</td><td>2026-11-04 ~ 2026-11-06 (커밋 30개, 구현 계획 Phase 0~11)</td></tr><tr><td>규모</td><td>앱 코드 약 14,100줄(<code>src/</code>, <code>.ts</code>·<code>.svelte</code>), 테스트 코드 약 5,100줄</td></tr></tbody></table>
+    </section>
+    <section id="sec-2"><h2>2. 목표 및 배경</h2>
+<ul><li>엑셀이나 다른 앱에 흩어진 독서 기록을 <strong>한눈에 보이는 책장</strong>으로 바꾸는 것이 출발점입니다. 한 해가 한 선반이고, 쪽수가 두께, 분야가 책등 무늬, 표지 색이 책등 색이 됩니다.</li><li>핵심 가치<ul><li><strong>보는 즐거움</strong>: 숫자 목록 대신 실제 책장처럼 꽂힌 책등, 꺼내면 옆 책을 밀며 비스듬히 돌아 나오는 3D 책, 연도별 나이테.</li><li><strong>빠른 기록</strong>: ISBN·제목 검색으로 책 한 권 등록을 10초 안에.</li><li><strong>첫날부터 여러 해</strong>: 기존 기록을 CSV로 가져와 바로 여러 해의 책장을 채움.</li><li><strong>돌아보기</strong>: 연도끼리 비교하고, 연말에 그해의 책·한 줄 회고·공유용 회고 카드를 만듦.</li><li><strong>이어 가기</strong>: 올해 목표 권수를 정하고 책장·나이테에서 진행률을 확인.</li><li><strong>찾기</strong>(v3): 책장이 커져도 전체 목록에서 제목·저자·연도·분야·별점으로 바로 찾음.</li></ul></li><li>운영 제약: 새 서비스를 늘리지 않고 <strong>GitHub(Pages)와 Supabase 무료 요금제</strong> 안에서 운영합니다. Supabase 프로젝트는 기존 독서 앱과 함께 쓰므로 <code>bookchronicle</code> 스키마만 다룹니다.</li><li>하지 않는 것: 오프라인 사용, 여러 사용자·소셜 기능, 기존 앱과의 데이터 교환, 인용문·독서 노트 중심 기능(P2), AI 추천.</li></ul>
+    </section>
+    <section id="sec-3"><h2>3. 주요 기능</h2>
+<h3>로그인</h3>
+<ul><li>이메일 + 비밀번호(회원 가입 화면 없음). 기존 독서 앱과 같은 계정.</li><li><strong>배경 그림</strong>(v3): 책장과 "북크로니클 / BOOK CHRONICLE" 제목이 그려진 그림 위에 로그인 카드. 가로 화면은 그림이 화면을 채우고, 세로 화면은 그림을 위에 크게 놓음.</li><li><strong>로그인이 끝났을 때 안내</strong>(v3): 다른 곳에서 전체 로그아웃되어 서버의 세션이 사라지면, 한 번 새로 받아 보고 안 되면 로그인 화면에 "로그인이 끝났어요. 다시 로그인해 주세요"를 보여 줌.</li><li>로그아웃은 이 브라우저만(v3). 기존 독서 앱과 다른 기기의 로그인은 그대로.</li></ul>
+<h3>책장 홈 (<code>#/</code>)</h3>
+<ul><li>연도별 책장(올해는 비어 있어도 표시), 맨 위 "읽는 중" 선반, 맨 아래 "중단한 책"·"연도 미상" 선반.</li><li>생성형 책등: 쪽수 → 두께, 분야 → 무늬(하드커버·페이퍼백·라벨형), 표지 → 색, 제목은 말줄임 없이 모두 표시(Pretendard).</li><li>표지 질감 모드: 흐린 표지를 깐 책등(표지가 없는 책은 생성형).</li><li>상단 도구(v3 정리): 윗줄은 검색창(+ 지난해 접기), 아랫줄은 정렬 칩 6가지 + 강조 보기. 두 줄의 좌우 끝을 맞춤.</li><li>정렬 6가지: 내 순서(끌어 옮기기, Alt+←→), 완독일순, 색상순, 분야순, 별점순, 쪽수순.</li><li>다른 해 책장으로 끌어 옮기기: 놓으면 완독일 확인 창(월·일 유지, 연도만 바꿔 미리 채움). 화면 끝에서 자동 스크롤.</li><li><strong>꺼내 보기 3D</strong>(v3 다듬기): 마우스를 올리면 살짝 들리고, 누르면 오른쪽 책들이 옆으로 밀리며 책이 62° 돌아 실제 표지가 비스듬히 보임. 위에서 조금 내려다보는 시점이라 책 윗면(종이 결)이 보이고, 돌아간 책등은 어둡게, 표지에는 접히는 홈 그림자와 광택. 줄 끝 책은 왼쪽으로 당겨 자리를 만듦. 꺼낸 책(책등·표지·윗면 어디든)을 다시 누르면 제자리로 꽂힘. 움직임 줄이기에서도 3D 모습은 보이고 애니메이션만 꺼짐.</li><li><strong>그해의 책 트로피 배지</strong>(v3): 책등 위 끝에 밝은 금색 원 + 트로피 아이콘(이전의 책갈피 끈을 바꿈).</li><li>강조 보기(별점 4.5 이상 또는 분야), 지난해 접기(책등 색 띠), 읽는 중 책 기대어 놓기.</li><li>올해 요약, "한눈에", 올해의 나이테, 목표 권수 진행률(요약·진행 막대·나이테 바깥 호).</li></ul>
+<h3>전체 목록 (<code>#/list</code>, v3 새 화면)</h3>
+<ul><li>기록 하나가 한 줄(다시 읽은 책은 "2회째" 표시). 읽는 중·중단 기록도 포함.</li><li>내 책장 안에서 제목·저자 검색(대소문자·띄어쓰기 무시).</li><li>거르기: 연도(연도 미상·읽는 중·중단 포함), 분야, 별점(4.5 이상·4 이상·3 이하·없음), 다시 읽은 책만(같은 책 기록을 읽은 순서로 붙여서).</li><li>정렬: 최근에 읽은 순·오래된 순·제목 가나다순·별점 높은 순·두꺼운 순. 요약 줄("25권 · 8,508쪽 · 평균 별점 4.0")은 거른 결과를 따라감.</li><li>넓으면 표(제목·저자·분야·완독·별점·쪽수), 좁으면 두 줄 카드. 100줄씩 더 보기, ↑↓ 키보드.</li><li>줄을 누르면 책장과 같은 상세 패널(고치기·다시 읽은 기록·그해의 책). 다른 메뉴에 다녀와도 검색어·거르기 유지.</li></ul>
+<h3>책 꽂기</h3>
+<ul><li>카카오 책 검색(제목·저자) + 국립중앙도서관 ISBN 서지정보(쪽수·KDC 분류) 자동 입력.</li><li>검색 함수 미리 깨우기: 책 찾기 칸에 처음 입력할 때 함수를 미리 깨워 첫 검색의 콜드 스타트를 줄임.</li><li>표지에서 책등 색 3가지(바탕·띠·강조) 추출, 직접 바꾸기 가능. 바코드 스캔(휴대폰 카메라로 ISBN).</li><li>별 5개를 눌러 채우는 0.5 단위 별점, 분야 24개 + 직접 입력, 수동 입력 전환.</li></ul>
+<h3>가져오기·백업 (<code>#/import</code>)</h3>
+<ul><li>CSV 가져오기: 인코딩 자동 판별(UTF-8/CP949), 열 맞추기 추천, 다양한 날짜·별점 형식, Goodreads 형식 인식, 보충 조회(동시 2건), 중복 처리.</li><li>JSON 백업·복원(덮어쓰기/합치기, 표지 포함 선택, 목표 권수 포함), CSV 내보내기(UTF-8 BOM), 30일 백업 알림.</li></ul>
+<h3>연도 비교 (<code>#/compare</code>)</h3>
+<ul><li>2~5개 연도의 지표 카드 6개와 증감, 권수 카드에 목표·달성 표시.</li><li>월별 선 그래프(권수·쪽수, 누적), 분야 비중 100% 누적 막대, 연도별 추이 막대, 표로 보기.</li></ul>
+<h3>연말 회고 (<code>#/recap/2026</code>)</h3>
+<ul><li>그해의 책 1~3위(고른 순서가 순위, 올리기·내리기·빼기, 별점 기반 후보 제안), 한 줄 회고(80자), 12월 안내.</li><li>회고 카드: 템플릿 3가지(책장형·월별형·분야형) × 크기 3가지 × 테마 3가지, 항목 선택, PNG 저장·공유.</li></ul>
+<h3>설정 (<code>#/settings</code>)</h3>
+<ul><li>테마(기기 설정·서재·종이)·책등 스타일(계정에 저장), 움직임 줄이기(기기별), 올해 목표 권수.</li><li>분야별 책등 무늬, 분야 이름 바꾸기·합치기, 도서 검색 연결 확인, 백업 바로 가기, 계정·로그아웃.</li></ul>
+<h3>화면 문구 (v3 정리)</h3>
+<ul><li>모든 화면 문구를 맞춤법 검사로 다듬음: 존댓말 끝맺음 통일, "취소"·"기록 고치기" 등 용어 통일, 칸·버튼 이름 정리.</li><li>책 제목·분야처럼 바뀌는 낱말 뒤의 조사를 받침에 맞게 고름(<code>josa</code>: 「데미안」을 / 「코스모스」를, 숫자·영문은 읽는 소리로 판단).</li></ul>
+    </section>
+    <section id="sec-4"><h2>4. 기술 스택 및 아키텍처</h2>
+<table><thead><tr><th>구분</th><th>선택</th><th>이유</th></tr></thead><tbody><tr><td>프론트엔드</td><td>Svelte 5(runes) + TypeScript 6.0 + Vite 8</td><td>작은 번들, 반응형 상태가 단순함. TS는 <code>typescript-eslint</code> 지원 범위 때문에 6.0</td></tr><tr><td>라우팅</td><td>직접 만든 해시 라우터</td><td>화면이 7개뿐이고 GitHub Pages는 서버 라우팅이 없음</td></tr><tr><td>백엔드</td><td>Supabase(Auth·Postgres·Storage·Edge Functions)</td><td>이미 쓰는 무료 프로젝트. <code>bookchronicle</code> 스키마로 분리</td></tr><tr><td>도서 정보</td><td>카카오 책 검색 + 국립중앙도서관 ISBN 서지정보</td><td>알라딘 Open API가 2026-10-30에 종료(결정 0008)</td></tr><tr><td>3D 책</td><td>CSS 3D 변환(<code>preserve-3d</code>, 원근 1100px)</td><td>라이브러리 없이 책등·표지·윗면 세 면을 돌림. 옆 책 밀기 거리는 순수 함수로 계산</td></tr><tr><td>그래프</td><td>Chart.js(연도 비교 화면에서만 지연 로드, 약 57KB gzip)</td><td>구현 계획에 정한 라이브러리</td></tr><tr><td>회고 카드</td><td>Canvas 2D(직접 그림)</td><td>템플릿·크기·테마 조합을 한 함수로 그리고 PNG로 저장</td></tr><tr><td>CSV</td><td>Papa Parse</td><td>따옴표·줄바꿈이 섞인 CSV를 안정적으로 읽음</td></tr><tr><td>바코드</td><td><code>BarcodeDetector</code> → 없으면 ZXing(스캔할 때만 로드)</td><td>아이폰 사파리에는 내장 인식기가 없음</td></tr><tr><td>배포</td><td>GitHub Actions → GitHub Pages</td><td><code>main</code>에 올리면 자동 배포</td></tr><tr><td>테스트</td><td>Vitest(단위), Playwright(E2E), axe-core(접근성)</td><td>계산은 단위 테스트, 화면 흐름은 가짜 Supabase로 E2E</td></tr></tbody></table>
+<h3>구조</h3>
+<pre><code>브라우저 (Svelte SPA, GitHub Pages)
+ ├─ src/pages/       화면: Login, Shelves, List, Compare, Recap, Import, Settings
+ ├─ src/components/  부품: Shelf, Book, ShelfTop, DetailPanel, BookDialog, BookSearch,
+ │                         GoalProgress, MoveDateDialog, ...
+ ├─ src/lib/         순수 계산(spine/geometry, shelves, listView, stats, csv, backup,
+ │                         recapCard, bookOfYear, moveYear, i18n/josa ...)
+ │                   상태 저장소(library.svelte.ts, prefs.svelte.ts, auth.svelte.ts)
+ └─ src/lib/data/    Supabase 접근은 여기서만 (books, readings, years, settings, covers)
+          │  publishable 키 + 로그인 세션
+          ▼
+Supabase (공유 프로젝트, bookchronicle 스키마만)
+ ├─ 테이블: books, readings, years, settings, aladin_cache  (모두 RLS "본인 행만")
+ ├─ Storage: bookchronicle-covers (비공개, 표지·질감)
+ └─ Edge Function: bookchronicle-books  ──▶ 카카오 / 국립중앙도서관 (API 키는 secrets에만)</code></pre>
+<ul><li><strong>데이터 모델</strong>: <code>books</code>(책 정보·책등 팔레트·표지 경로) 1 : N <code>readings</code>(독서 기록, 완독 1회 = 책등 1개). <code>readings.year</code>는 완독일에서 계산하는 생성 열. <code>years</code>(그해의 책 1~3위 배열·한 줄 회고·목표 권수), <code>settings</code>(테마·책등 스타일·무늬 매핑).</li><li><strong>마이그레이션</strong>: <code>0001</code>~<code>0006</code>(v3에서 DB 변경 없음).</li><li><strong>상태 관리</strong>: 책장 데이터는 <code>library.svelte.ts</code> 한곳에 두고, 저장 후에는 네 테이블을 다시 불러와 화면과 DB가 어긋나지 않게 합니다. 전체 목록은 이 책장 데이터에서 줄을 만들기 때문에 따로 불러오지 않습니다.</li><li><strong>스타일</strong>: 색·글꼴·간격은 <code>tokens.css</code>·<code>themes.css</code>의 CSS 변수만 씁니다. 테마와 상관없는 값(트로피 배지 금색, 로그인 배경 바탕색)은 <code>tokens.css</code>에 둡니다.</li></ul>
+    </section>
+    <section id="sec-5"><h2>5. 개발 과정 (타임라인)</h2>
+<table><thead><tr><th>날짜</th><th>커밋</th><th>단계</th><th>내용</th></tr></thead><tbody><tr><td>11-04</td><td><code>b223ee0</code></td><td>Phase 0</td><td>PRD·DESIGN·시안, 기존 앱 분석, 초기 결정(0001)</td></tr><tr><td>11-04</td><td><code>17fa27b</code></td><td>Phase 1</td><td>Svelte 5 골격, ESLint·Prettier·Vitest·Playwright, GitHub Pages 배포 파이프라인</td></tr><tr><td>11-04</td><td><code>77cc6f8</code></td><td>Phase 2</td><td><code>bookchronicle</code> 스키마·RLS·Storage 마이그레이션, 이메일 로그인</td></tr><tr><td>11-04</td><td><code>3b561b2</code>·<code>c7fc068</code></td><td>Phase 3</td><td>3단 앱 셸, 사이드바, 테마 전환, 공통 상태 부품</td></tr><tr><td>11-04</td><td><code>a440261</code></td><td>Phase 4 (MVP)</td><td>책 직접 입력, 생성형 책등 책장</td></tr><tr><td>11-04</td><td><code>150dfd7</code></td><td>수정</td><td>읽는 중·중단한 책 선반, 별 채우기 별점, 분야 24개(결정 0006)</td></tr><tr><td>11-04</td><td><code>41be9aa</code></td><td>Phase 5</td><td>도서 검색·표지 색 추출. 알라딘 종료로 카카오·국립중앙도서관으로 전환</td></tr><tr><td>11-04</td><td><code>5127c42</code>·<code>3b99ca6</code></td><td>수정</td><td>끌어 옮기기(내 순서), 얇은 책등, 제목 전체 표시, 제목 글꼴</td></tr><tr><td>11-05</td><td><code>4259ec8</code></td><td>Phase 6</td><td>꺼내 보기, 상세 패널, 그해의 책, 올해의 나이테, 움직임 줄이기</td></tr><tr><td>11-05</td><td><code>716536c</code></td><td>Phase 7</td><td>CSV 가져오기, JSON 백업·복원, CSV 내보내기</td></tr><tr><td>11-05</td><td><code>f07fb83</code></td><td>Phase 8</td><td>연도 비교, 연말 회고, 회고 카드</td></tr><tr><td>11-05</td><td><code>fd63d99</code></td><td>Phase 9</td><td>설정 화면, 표지 질감, P1 네 가지, 홈 화면 바로 가기, 성능·접근성 점검</td></tr><tr><td>11-05</td><td><code>986e679</code>·<code>29ee36f</code></td><td>문서</td><td>개발 보고서 v1, GitHub 비밀 값 검사 켬</td></tr><tr><td>11-05</td><td><code>b71ae79</code></td><td>Phase 10 묶음 A</td><td>미리 깨우기, 연도별 추이, 그해의 책 3권 순위, 회고 카드 템플릿</td></tr><tr><td>11-05</td><td><code>3c67f43</code></td><td>Phase 10 묶음 B</td><td>연도별 목표 권수(마이그레이션 0006), 다른 해 책장으로 끌어 옮기기</td></tr><tr><td>11-05</td><td><code>ce11808</code></td><td>문서</td><td>개발 보고서 v2</td></tr><tr><td>11-06</td><td><code>1c46b31</code>·<code>2d14547</code>·<code>9e362a4</code></td><td>3D 다듬기</td><td>옆 책 밀기·윗면·음영·표지 광택, 움직임 줄이기에서도 3D, 꺼낸 책을 다시 눌러 꽂기(결정 0017)</td></tr><tr><td>11-06</td><td><code>88f4042</code></td><td>문구</td><td>맞춤법 검사 결과 전체 반영, 받침에 따른 조사</td></tr><tr><td>11-06</td><td><code>b439059</code></td><td>수정</td><td>서버에서 끝난 로그인 처리, 이 브라우저만 로그아웃(결정 0018)</td></tr><tr><td>11-06</td><td><code>538a5b3</code></td><td>디자인</td><td>로그인 화면 배경 그림(결정 0019)</td></tr><tr><td>11-06</td><td><code>0013afc</code></td><td>Phase 11</td><td>전체 목록(결정 0020)</td></tr><tr><td>11-06</td><td><code>5552a61</code>·<code>ad14343</code></td><td>디자인</td><td>책장 상단 도구 정리, 그해의 책 트로피 배지(결정 0021)</td></tr></tbody></table>
+<p>작업 방식: 구현 계획 체크리스트 → 관련 PRD·DESIGN 절 확인 → 구현·테스트 → 결정 기록(<code>docs/decisions/0001~0021</code>) → <code>check</code>·<code>lint</code>·<code>test</code>·E2E 종료 코드 0 확인 → 앱 주인이 <code>main</code>에 직접 커밋·푸시 → 배포 확인 후 다음 단계. v2 이후에는 앱 주인이 실제로 쓰며 보낸 의견(3D가 평면으로 보임, 검색 오류, 디자인 취향)을 하나씩 받아 고친 작업이 많았습니다.</p>
+    </section>
+    <section id="sec-6"><h2>6. 주요 의사결정과 이유</h2>
+<table><thead><tr><th>결정</th><th>이유</th></tr></thead><tbody><tr><td><strong>알라딘 → 카카오 + 국립중앙도서관</strong> (0008)</td><td>알라딘 Open API 종료. 카카오는 검색·표지, 국립중앙도서관은 쪽수·KDC 분류</td></tr><tr><td><strong>Edge Function이 직접 로그인 확인</strong> (<code>verify_jwt=false</code>, 0007)</td><td>publishable 키는 플랫폼 <code>verify_jwt</code>가 이해하지 못함. 함수 안에서 <code>auth.getUser</code>로 확인하고 앱 주인 ID만 허용</td></tr><tr><td><strong>표지는 함수가 중계, 브라우저가 줄이고 올림</strong> (0007)</td><td>색 추출에 브라우저가 픽셀을 읽어야 하고, 외부 이미지는 CORS 때문에 캔버스로 못 읽음</td></tr><tr><td><strong><code>readings.year</code> 생성 열, 외래 키 <code>(book_id, user_id)</code></strong> (0003)</td><td>완독일과 연도가 어긋날 수 없게, 남의 책 ID에 기록을 달 수 없게</td></tr><tr><td><strong>읽는 중·중단 선반을 따로</strong> (0006)</td><td>상태를 바꾸면 책이 사라져 보인다는 앱 주인 의견</td></tr><tr><td><strong>책등 제목을 숨기지 않고 모두 표시, 얇은 책등</strong> (0009)</td><td>"작아도 제목이 다 보이면 좋겠다"는 요청. 한 해 15권이 보기 좋은 두께</td></tr><tr><td><strong>연도 색은 순위가 아니라 연도를 따라감</strong> (0013)</td><td>비교할 연도를 바꿔도 색이 바뀌지 않게</td></tr><tr><td><strong>테마·책등은 계정, 움직임 줄이기·접은 연도는 기기별</strong> (0014)</td><td>데스크톱에서 고른 보기가 휴대폰에도 같게</td></tr><tr><td><strong>그해의 책 순위 = 배열 순서, 목표는 연도마다</strong> (0015·0016)</td><td>스키마를 거의 바꾸지 않고 순위·목표를 표현, 해마다 목표가 남음</td></tr><tr><td><strong>3D 꺼내 보기: 오른쪽 책을 밀고, 줄 끝이면 왼쪽으로 당김</strong> (0017)</td><td>앱 주인 요청. 밀 거리 = 돌아간 책이 차지하는 폭(책등 cos + 표지 sin)에서 원래 폭을 뺀 값. 줄에 자리가 모자라면 꺼낸 책과 왼쪽 책을 당겨 책장 밖으로 넘치지 않게</td></tr><tr><td><strong>움직임 줄이기에서도 3D 자세는 보여 줌</strong> (0017)</td><td>앱 주인이 움직임 줄이기를 켜 둔 상태라 "평면으로 보인다"고 느낌. 3D 자세는 움직임이 아니므로 애니메이션만 끔(앱 주인 선택)</td></tr><tr><td><strong>윗면은 꺼낸 책에만 그림</strong> (0017)</td><td>모든 책에 숨은 윗면을 두면 1,000권에서 0.2초 느려짐</td></tr><tr><td><strong>서버에서 끝난 로그인은 새로 받아 보고, 안 되면 로그인 화면으로</strong> (0018)</td><td>기존 앱에서 전체 로그아웃하자 북크로니클 세션이 서버에서 지워져 검색만 401이 났고, 앱이 이를 "권한 없음"으로 잘못 안내함</td></tr><tr><td><strong>로그아웃은 이 브라우저만(<code>scope: 'local'</code>)</strong> (0018)</td><td>Supabase 기본값은 같은 계정의 모든 로그인을 끊음. 북크로니클에서 로그아웃해도 기존 앱은 그대로 두기 위해. 기존 앱 쪽 코드는 공유 규칙상 바꾸지 않음</td></tr><tr><td><strong>로그인 배경 그림은 테마와 상관없이 한 장</strong> (0019)</td><td>앱 주인이 만든 그림. 카드만 테마 색을 따르고, 그림에 제목·책장이 있어 카드 위 작은 책장 그림은 뺌</td></tr><tr><td><strong>전체 목록은 기록 하나가 한 줄</strong> (0020)</td><td>연도·별점은 기록마다 다르므로 거르기가 정확함. 다시 읽은 책은 "회째" 표시와 거르기로 모아 봄(앱 주인 선택)</td></tr><tr><td><strong>목록 거르기 상태는 메모리에만</strong> (0020)</td><td>다른 메뉴에 다녀와도 남지만 새로 고침하면 처음 상태. 해시 라우터를 고치지 않아도 됨(앱 주인 선택)</td></tr><tr><td><strong>목록 검색·거르기 줄은 900px 이상에서만 고정</strong> (0020)</td><td>휴대폰에서 고정하면 화면의 1/3을 늘 가림</td></tr><tr><td><strong>그해의 책 표시는 트로피 배지, 공통 금색</strong> (0021)</td><td>앱 주인 요청(이모지가 아닌 깔끔한 아이콘, 밝은 색, 책등 위). 어떤 책등 색에서도 보이게 크림색 테두리</td></tr><tr><td><strong>조사는 받침을 보고 고름</strong> (<code>josa</code>)</td><td>책 제목·분야 이름이 바뀌어도 "을/를"이 맞게. 숫자·영문은 읽는 소리(6 → 육, L → 엘)로 판단</td></tr><tr><td><strong>오프라인 캐시 없음, <code>main</code>에 바로 커밋</strong></td><td>데이터 원본은 Supabase 하나. 1인 프로젝트라 브랜치 없이, 대신 커밋 전 검사 종료 코드 0 확인</td></tr></tbody></table>
+    </section>
+    <section id="sec-7"><h2>7. 문제 해결 기록</h2>
+<table><thead><tr><th>문제</th><th>원인</th><th>해결</th></tr></thead><tbody><tr><td>알라딘 검색이 모두 실패</td><td>알라딘 Open API 종료(2026-10-30)</td><td>카카오·국립중앙도서관으로 전환(0008)</td></tr><tr><td>책등 제목이 아래로 넘침</td><td>세로쓰기 한글 간격 약 1.2em, 라벨 여백 미반영</td><td>계산에 넣고 여백을 높이 기준으로</td></tr><tr><td>1,000권에서 긴 작업</td><td>모든 책등에 IntersectionObserver</td><td>질감이 있는 책만 감시</td></tr><tr><td>(v2) 원격 DB 적용이 "확인 필요"로 멈춤</td><td>Supabase CLI 3.x가 원격 변경에 <code>--yes</code> 요구</td><td>앱 주인 승인 뒤 <code>--yes</code>로 실행</td></tr><tr><td>(v3) "3D로 바꿨는데 여전히 평면이고 옆 책도 안 움직임"</td><td>앱 주인 기기에 움직임 줄이기가 켜져 있었고, 그 상태에서는 3D 자세 자체를 끄고 있었음</td><td>증상을 묻는 질문("테두리가 보여")으로 원인을 좁힘. 움직임 줄이기에서는 애니메이션만 끄고 자세는 보여 줌</td></tr><tr><td>(v3) 꺼낸 책을 다시 눌러도 꽂히지 않음</td><td>꺼낸 책의 표지 면이 <code>pointer-events: none</code>이라 표지를 누르면 옆 책이 눌림. 맨 앞 책은 가로 넘침 방지(<code>overflow-x: clip</code>)에 책등이 잘림</td><td>꺼낸 책의 표지·윗면도 누를 수 있게 하고, 책장에 좌우 여유(음수 margin + padding)를 줌</td></tr><tr><td>(v3) 3D 윗면 때문에 1,000권 표시가 0.2초 느려짐</td><td>숨은 윗면 요소를 모든 책에 그림</td><td>꺼낸 책에만 그림</td></tr><tr><td>(v3) 꺼내 보기 E2E가 때때로 실패</td><td>회전 애니메이션 중에 클릭 위치가 바뀜</td><td>테스트에서 움직임 줄이기를 흉내 내고, 화면에 보이게 스크롤한 뒤 마우스로 누름</td></tr><tr><td>(v3) 어제 되던 검색이 "이 계정으로는 도서 검색을 쓸 수 없어요"</td><td>기존 앱의 전체 로그아웃으로 서버 세션이 사라짐. 브라우저 토큰은 만료 전이라 책장은 보였지만, 함수의 <code>auth.getUser</code>가 <code>session_not_found</code> → 401. 앱은 401을 403과 같이 "권한 없음"으로 안내</td><td>Supabase 함수·Auth 로그로 원인 확인. 401이면 세션을 새로 받아 다시 시도, 안 되면 로그인 화면으로(0018)</td></tr><tr><td>(v3) 로그인 배경이 1280×720에서 카드 아래가 잘림</td><td>그림 속 제목 아래부터 카드를 놓아 남은 높이가 모자람</td><td>그림과 겹치는 카드 위 작은 책장 그림을 빼서 높이를 줄임</td></tr><tr><td>(v3) 휴대폰에서 로그인 배경 제목이 잘림</td><td>16:9 그림을 세로 화면에 꽉 채우면 양옆이 잘림</td><td>세로 화면은 그림 높이를 화면의 55%(최대 140vw)로 위에 붙이고 아래 끝을 바탕색으로 흐리게</td></tr><tr><td>(v3) 휴대폰 상단 도구에서 '지난해 접기'가 다음 줄로 떨어짐</td><td>두 줄 모두에 줄바꿈을 허용</td><td>아랫줄(정렬·강조)만 줄바꿈</td></tr><tr><td>(v3) 셸 명령이 멈춤</td><td>따옴표가 섞인 heredoc</td><td>편집은 임시 Python 스크립트로</td></tr></tbody></table>
+    </section>
+    <section id="sec-8"><h2>8. 보안/성능 고려사항</h2>
+<h3>보안</h3>
+<ul><li>공유 Supabase 프로젝트: <code>bookchronicle</code> 스키마·<code>bookchronicle-covers</code> 버킷·<code>bookchronicle-</code> 함수만 다루고, 기존 앱 자원은 읽지도 고치지도 않음.</li><li>모든 테이블·버킷에 RLS "본인 행만"(<code>user_id = (select auth.uid())</code>). <code>npm run check:rls</code>로 원격 점검.</li><li>브라우저에는 Supabase 주소와 publishable 키만. 도서 API 키는 <code>supabase secrets</code>에만.</li><li>Edge Function: 허용한 Origin에만 CORS, 로그인 + 앱 주인 ID 확인(401/403).</li><li>(v3) 로그인 문제를 진단할 때 Supabase 로그(함수 응답 코드, Auth의 <code>session_not_found</code>)와 <code>bookchronicle.books</code>의 사용자 ID만 읽기 전용으로 조회했습니다. 비밀 값은 읽거나 출력하지 않았습니다.</li><li>(v3) 로그아웃 범위를 이 브라우저로 좁혀, 북크로니클이 기존 앱의 로그인을 끊지 않습니다. Auth 설정은 바꾸지 않았습니다.</li><li>GitHub 저장소: Secret Protection과 Push protection을 켬.</li></ul>
+<h3>성능</h3>
+<ul><li>책 1,000권(10년치)에서 로그인 → 모든 책장 표시 약 1.1~1.4초(목표 2초), 스크롤 중 50ms 넘는 작업 없음. 3D 윗면은 꺼낸 책에만 그려 이 수치를 지킴.</li><li>전체 목록은 처음 100줄만 그리고 "더 보기"로 늘림. 목록 계산은 이미 불러온 책장 데이터를 쓰므로 추가 요청이 없음.</li><li>무거운 라이브러리는 필요한 화면에서만 지연 로드(Chart.js, ZXing). 로그인 배경 그림은 WebP(약 146KB).</li></ul>
+    </section>
+    <section id="sec-9"><h2>9. 테스트 및 검증</h2>
+<table><thead><tr><th>종류</th><th>도구</th><th>규모·내용</th></tr></thead><tbody><tr><td>타입 검사</td><td><code>svelte-check</code> + TypeScript strict</td><td>오류 0</td></tr><tr><td>린트</td><td>ESLint 10 + Prettier</td><td>오류 0</td></tr><tr><td>단위 테스트</td><td>Vitest</td><td>16개 파일, 208개 통과(v2 188개). v3에서 목록 줄 만들기·회째·검색 정규화·거르기·정렬·다시 읽은 책 묶기·요약, 조사 고르기, 옆 책 밀기 거리를 더함</td></tr><tr><td>E2E</td><td>Playwright(1440px·390px), 가짜 PostgREST·Storage</td><td>14개 파일, 164개 통과·14개 건너뜀(v2 146개). v3에서 전체 목록(찾기·거르기·초기화·다시 읽은 책·상세 패널·키보드·상태 유지·빈 상태), 꺼내 보기 3D(움직임 줄이기, 옆 책 밀기, 표지 다시 누르기), 로그인이 끝났을 때 안내, 이 브라우저만 로그아웃을 더함</td></tr><tr><td>접근성</td><td>axe-core(WCAG 2.1 A·AA)</td><td>두 테마 × 주요 화면(v3에서 <code>#/list</code> 추가) × 데스크톱·휴대폰 폭, 위반 0건</td></tr><tr><td>눈으로 확인</td><td>임시 스크린샷 스크립트</td><td>v3: 시안과 꺼내 보기 비교, 로그인 배경(1920·1440·1280·768·390px, 두 테마), 전체 목록(1440·1024·390px), 상단 도구 좌우 끝 맞춤(픽셀 측정), 트로피 배지(두 테마, 꺼낸 모습)</td></tr><tr><td>원격 점검</td><td>Supabase 로그 조회, <code>check:rls</code>, <code>check:books</code></td><td>검색 401 원인 확인</td></tr><tr><td>배포 후 확인</td><td>앱 주인</td><td>다시 로그인 후 검색, 전체 목록, 트로피 배지 배포 확인(2026-11-06)</td></tr></tbody></table>
+    </section>
+    <section id="sec-10"><h2>10. 배포</h2>
+<ul><li><code>main</code>에 푸시하면 GitHub Actions가 빌드(<code>vite build</code>, <code>base: '/book-chronicle/'</code>)해 GitHub Pages로 배포합니다.</li><li>주소: <strong><a href="https://poguni.github.io/book-chronicle/">https://poguni.github.io/book-chronicle/</a></strong> (해시 주소: <code>#/</code>, <code>#/list</code>, <code>#/compare</code>, <code>#/recap/2026</code>, <code>#/import</code>, <code>#/settings</code>)</li><li>DB: <code>supabase/migrations/0001~0006</code>(v3에서 바뀐 것 없음). Edge Function도 v3에서 다시 배포하지 않았습니다.</li><li>로그인 배경 그림은 <code>public/</code>에 두고 <code>import.meta.env.BASE_URL</code>로 하위 경로를 붙여 씁니다.</li></ul>
+    </section>
+    <section id="sec-11"><h2>11. 알려진 한계</h2>
+<ul><li><strong>국립중앙도서관 인증키 승인 대기</strong>: 그전까지 검색으로 꽂은 책은 쪽수가 비어 분야 평균으로 추정해 그립니다.</li><li><strong>기존 앱에서 로그아웃하면 북크로니클도 다시 로그인해야 함</strong>: 기존 앱의 로그아웃이 전체 범위라서입니다. 이제는 엉뚱한 안내 대신 로그인 화면으로 돌아가며, 기존 앱 코드는 공유 규칙상 바꾸지 않습니다.</li><li><strong>실기기 확인이 남음</strong>: 바코드 스캔, 홈 화면 추가, 표지 질감 모드, 회고 카드 공유, 휴대폰에서 3D 꺼내 보기와 목록 줄 누르기.</li><li><strong>쓰지 않는 그림 파일</strong>: <code>public/book-chronicle-splash-screen.png</code>(약 1.8MB)가 저장소와 배포본에 남아 있습니다. 앱은 WebP만 씁니다.</li><li><strong>목록 거르기는 새로 고침하면 처음 상태</strong>: 주소에 담지 않았습니다.</li><li><strong>휴대폰·키보드로는 다른 해로 끌어 옮기기 불가</strong>: "기록 고치기"로 날짜를 바꿉니다.</li><li><strong>판형(책 크기) 없음</strong>: 책등 높이는 책 ID 기반 난수입니다.</li><li><strong>로컬 DB·Edge Function 실행 환경 없음</strong>: 마이그레이션은 원격에서 바로, 함수는 Vitest 흉내와 배포 후 점검으로 확인합니다.</li><li><strong>문서 불일치</strong>: PRD 6.7·DESIGN 6.2의 제목 숨김 규칙, 설정 저장 범위, 그해의 책 3권·목표 권수·카드 템플릿·전체 목록·3D 다듬기 등이 PRD에는 아직 반영되지 않았습니다(결정 기록 0009~0021이 우선). DESIGN은 트로피 배지(6.5)만 고쳤고, 7.4의 로그인 카드 작은 책장 그림 설명은 남아 있습니다.</li><li><strong>E2E 한 개가 가끔 실패</strong>: 전체 실행에서 <code>journey.spec.ts</code>나 성능 테스트가 드물게 실패하고 다시 돌리면 통과합니다(타이밍 영향).</li></ul>
+    </section>
+    <section id="sec-12"><h2>12. 향후 개선 아이디어 / 업데이트 계획</h2>
+<h3>다음에 하면 좋을 것</h3>
+<ol><li><strong>국립중앙도서관 키 등록과 쪽수 보충</strong>: 키가 승인되면 <code>NLK_CERT_KEY</code> 등록 → <code>check:books</code> 확인 → 쪽수가 비어 있는 책을 설정 화면에서 한꺼번에 다시 조회하는 버튼. 전체 목록에 "쪽수 모름만" 거르기를 더하면 어떤 책이 비었는지도 바로 보입니다.</li><li><strong>쓰지 않는 PNG 지우기</strong>: <code>public/book-chronicle-splash-screen.png</code>를 지워 배포본을 1.8MB 줄이기.</li><li><strong>PRD·DESIGN 문서 정리</strong>: 결정 0009~0021 내용을 기획서·디자인 문서에 반영(특히 PRD F8 전체 목록, DESIGN 7.4 로그인 카드).</li><li><strong>실기기 점검 기록</strong>: 휴대폰에서 3D 꺼내 보기, 목록 줄 누르기, 로그인 배경, 바코드 스캔을 확인하고 <code>docs/screen-checklist.md</code>에 기록.</li></ol>
+<h3>여유 있으면</h3>
+<ul><li><strong>목록에서 바로 보내기</strong>: 거른 결과만 CSV로 내보내기(예: "2025년 별 5개 책").</li><li><strong>목록 거르기를 주소에 담기</strong>: <code>#/list?year=2025&amp;rating=gte4.5</code>처럼 새로 고침해도 남고 즐겨찾기도 되게.</li><li><strong>목표 페이스 안내</strong>: "이대로면 연말까지 약 14권", 목표까지 한 달에 몇 권이 필요한지.</li><li><strong>그해의 책 배지에 순위 표시</strong>: 1·2·3위를 금·은·동 배지로 나누거나 작은 숫자를 붙이기.</li><li><strong>키보드로 다른 해로 옮기기</strong>: 책등에서 단축키로 옮기기 창 열기.</li><li><strong>회고 카드 템플릿 더하기</strong>: 목표 달성 카드, 별점 분포 카드.</li></ul>
+<h3>아이디어 수준</h3>
+<ul><li><strong>인용문·독서 노트(P2)</strong>: 책마다 밑줄 친 문장을 모아 보는 공책.</li><li><strong>시리즈 묶기</strong>: 같은 시리즈 책등을 이어 붙여 보여 주기.</li><li><strong>연도 타임랩스</strong>: 해마다 책장이 채워지는 모습을 애니메이션으로.</li><li><strong>스플래시 화면</strong>: 앱을 처음 열 때 로그인 배경 그림과 '들어가기' 버튼만 있는 시작 화면(로그인된 상태에서도).</li></ul>
+    </section>
+    <section id="sec-13"><h2>13. 이전 버전(v2) 이후 변경 사항</h2>
+<h3>새 기능</h3>
+<ul><li><strong>전체 목록</strong> (<code>0013afc</code>, Phase 11, 결정 0020): PRD에 남은 마지막 P1(F8). 검색·거르기·정렬·요약, 상세 패널 연결, 상태 유지.</li><li><strong>로그인 배경 그림</strong> (<code>538a5b3</code>, 결정 0019).</li><li><strong>그해의 책 트로피 배지</strong> (<code>ad14343</code>, 결정 0021): 책갈피 끈을 바꿈.</li></ul>
+<h3>고친 것·다듬은 것</h3>
+<ul><li><strong>꺼내 보기 3D</strong> (<code>1c46b31</code>·<code>2d14547</code>·<code>9e362a4</code>, 결정 0017): 옆 책 밀기, 윗면·음영·광택, 움직임 줄이기에서도 3D, 꺼낸 책을 다시 눌러 꽂기, 맨 앞 책 잘림 해결.</li><li><strong>로그인이 끝났을 때 처리</strong> (<code>b439059</code>, 결정 0018): 401에서 세션 새로 받기 → 안 되면 로그인 화면 안내, 이 브라우저만 로그아웃.</li><li><strong>화면 문구</strong> (<code>88f4042</code>): 맞춤법 검사 전체 반영, 받침에 따른 조사(<code>josa</code>).</li><li><strong>책장 상단 도구</strong> (<code>5552a61</code>): 강조 보기를 정렬 줄로 올리고 검색창과 좌우 폭을 맞춤.</li></ul>
+<h3>v2 제안 중 처리한 것</h3>
+<ul><li>"다음에 하면 좋을 것" 2번 <strong>전체 목록</strong>을 끝냄.</li><li>3번 문서 정리는 DESIGN 6.5(트로피 배지)만 반영, 나머지는 남음.</li></ul>
+<h3>숫자로 본 변화</h3>
+<table><thead><tr><th>항목</th><th>v2</th><th>v3</th></tr></thead><tbody><tr><td>커밋</td><td>20</td><td>30</td></tr><tr><td>결정 기록</td><td>0001~0016</td><td>0001~0021</td></tr><tr><td>단위 테스트</td><td>188</td><td>208</td></tr><tr><td>E2E 통과</td><td>146</td><td>164</td></tr><tr><td>E2E 파일</td><td>13</td><td>14</td></tr><tr><td>앱 코드</td><td>약 13,200줄</td><td>약 14,100줄</td></tr><tr><td>화면</td><td>6개 + 자리 화면 1개</td><td>7개 모두</td></tr></tbody></table>
+    </section>
+    <section id="sec-14"><h2>부록. 결정 기록 목록</h2>
+<table><thead><tr><th>번호</th><th>제목</th></tr></thead><tbody><tr><td>0001</td><td>개발 시작 전 결정 사항</td></tr><tr><td>0002</td><td>Phase 1 도구 선택</td></tr><tr><td>0003</td><td>Phase 2 Supabase 스키마·로그인</td></tr><tr><td>0004</td><td>Phase 3 앱 셸·디자인 시스템</td></tr><tr><td>0005</td><td>Phase 4 책 입력과 생성형 책등</td></tr><tr><td>0006</td><td>읽는 중 선반, 별 채우기 별점, 분야 24개</td></tr><tr><td>0007</td><td>Phase 5 알라딘 검색과 표지</td></tr><tr><td>0008</td><td>알라딘 종료 → 카카오 + 국립중앙도서관</td></tr><tr><td>0009</td><td>책 순서 끌어 옮기기, 얇은 책등, 제목 다 보이기</td></tr><tr><td>0010</td><td>제목 글꼴을 고운 돋움으로</td></tr><tr><td>0011</td><td>Phase 6 꺼내 보기와 상세 패널</td></tr><tr><td>0012</td><td>Phase 7 CSV 가져오기와 백업</td></tr><tr><td>0013</td><td>Phase 8 연도 비교와 연말 회고</td></tr><tr><td>0014</td><td>Phase 9 테마·반응형·마무리</td></tr><tr><td>0015</td><td>Phase 10 묶음 A: 미리 깨우기, 연도별 추이, 그해의 책 3권, 회고 카드 템플릿</td></tr><tr><td>0016</td><td>Phase 10 묶음 B: 목표 권수, 다른 해 책장으로 끌어 옮기기</td></tr><tr><td>0017</td><td>꺼내 보기 3D 다듬기: 옆 책 밀기, 윗면·음영</td></tr><tr><td>0018</td><td>서버에서 끝난 로그인 처리와 이 브라우저만 로그아웃</td></tr><tr><td>0019</td><td>로그인 화면 배경 그림</td></tr><tr><td>0020</td><td>전체 목록 화면</td></tr><tr><td>0021</td><td>그해의 책 표시를 트로피 배지로</td></tr></tbody></table>
+    </section>
+  </main>
+</div>
+<script>
+  const links = document.querySelectorAll('nav.sidebar a');
+  const sections = [...links].map(a => document.querySelector(a.getAttribute('href')));
+  const setActive = (id) => links.forEach(a => a.classList.toggle('active', a.getAttribute('href') === '#' + id));
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach((entry) => { if (entry.isIntersecting) setActive(entry.target.id); });
+  }, { rootMargin: '-20% 0px -70% 0px' });
+  sections.forEach((el) => el && observer.observe(el));
+</script>
+</body>
+</html>
