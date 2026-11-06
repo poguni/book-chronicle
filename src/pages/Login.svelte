@@ -2,17 +2,8 @@
   import { auth } from '../lib/auth.svelte';
   import { ko } from '../lib/i18n/ko';
 
-  // 카드 위 작은 책장 그림 (DESIGN 7.4). 책등 색은 토큰이 아니라 책 데이터처럼 다룹니다.
-  const miniShelf = [
-    { w: 14, h: 44, c: '#2F4F6F' },
-    { w: 26, h: 56, c: '#C8A24A' },
-    { w: 12, h: 40, c: '#D8C3A5' },
-    { w: 18, h: 50, c: '#3E6B5A' },
-    { w: 30, h: 58, c: '#1F2340' },
-    { w: 16, h: 46, c: '#8E3B2F' },
-    { w: 20, h: 52, c: '#E8E1D3' },
-    { w: 14, h: 42, c: '#4B3F72' },
-  ];
+  // 로그인 배경 그림 (public/). GitHub Pages의 하위 경로(base)를 붙입니다.
+  const splash = `url('${import.meta.env.BASE_URL}book-chronicle-splash-screen.webp')`;
 
   let email = $state('');
   let password = $state('');
@@ -28,14 +19,8 @@
   }
 </script>
 
-<div class="login">
+<div class="login" style:--splash={splash}>
   <form class="login-card" aria-labelledby="loginTitle" {onsubmit}>
-    <div class="mini-shelf" aria-hidden="true">
-      {#each miniShelf as book, i (i)}
-        <span style:width="{book.w}px" style:height="{book.h}px" style:background={book.c}></span>
-      {/each}
-    </div>
-
     <div class="heading">
       <span class="label">{ko.login.brand}</span>
       <h1 class="display" id="loginTitle">{ko.login.title}</h1>
@@ -99,16 +84,39 @@
 
 <style>
   /* 시안(design-mockup-study.html) '로그인 화면' 절을 그대로 옮김 */
+  /*
+   * 배경 그림(1920×1080)의 제목은 그림 위쪽 35%(y≈380px)에 있으므로 카드는 그 아래 빈 곳에 둡니다.
+   * 가로 화면: 화면을 꽉 채우고(cover) 그림 1px = max(100vw/1920, 100vh/1080)이므로
+   * 제목 아래 끝은 화면 가운데에서 (540 - 400)그림px 위입니다.
+   */
   .login {
+    --img-px: max(100vw / 1920, 100vh / 1080);
     position: fixed;
     inset: 0;
     z-index: 50;
-    background: var(--bg);
+    background: var(--splash) center / cover no-repeat var(--splash-bg);
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: center;
-    padding: 24px;
+    padding: max(24px, calc(50vh - 140 * var(--img-px))) 24px 24px;
     overflow-y: auto;
+  }
+  /*
+   * 세로 화면: 그림을 위에 붙여 화면 높이의 55%쯤으로 키우고 양옆은 잘라 냅니다.
+   * 제목(그림 가로 575~1345px)이 잘리지 않게 높이는 140vw까지, 폭은 화면보다 좁아지지 않게.
+   * 카드는 제목 아래 끝(그림 y≈400px)부터.
+   */
+  @media (orientation: portrait) {
+    .login {
+      --img-w: max(100vw, min(55vh, 140vw) * 1920 / 1080);
+      --img-h: calc(var(--img-w) * 1080 / 1920);
+      /* 그림 아래 끝이 딱 끊기지 않게 바탕색으로 흐리게 */
+      background:
+        linear-gradient(to bottom, transparent 60%, var(--splash-bg)) top center / 100% var(--img-h)
+          no-repeat,
+        var(--splash) top center / var(--img-w) auto no-repeat var(--splash-bg);
+      padding-top: calc(var(--img-w) * 400 / 1920 + 8px);
+    }
   }
   .login-card {
     width: min(420px, 100%);
@@ -120,18 +128,6 @@
     background: var(--panel);
     border: 1px solid var(--line);
     box-shadow: var(--book-shadow);
-  }
-  .mini-shelf {
-    display: flex;
-    align-items: flex-end;
-    gap: 2px;
-    height: 64px;
-    padding: 0 6px;
-    border-bottom: 6px solid var(--plank);
-  }
-  .mini-shelf span {
-    display: block;
-    border-radius: 2px 2px 0 0;
   }
   .heading {
     display: flex;
@@ -204,7 +200,8 @@
   }
   @media (max-width: 420px) {
     .login {
-      padding: 16px;
+      padding-inline: 16px;
+      padding-bottom: 16px;
     }
     .login-card {
       padding: 28px 20px;

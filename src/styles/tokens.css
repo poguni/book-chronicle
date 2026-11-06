@@ -12,4 +12,6 @@
   --spine-hk: clamp(0.72px, 0.07vw, 0.98px); /* 책등 높이 배율 */
   --ease-book: cubic-bezier(0.2, 0.7, 0.2, 1);
   --success: #7fb069; /* 저장됨 점 (DESIGN 3.1) */
+  /* 로그인 배경 그림(book-chronicle-splash-screen.webp)의 바탕색: 그림이 덮지 못한 곳을 채움 */
+  --splash-bg: #f9e7ca;
 }
