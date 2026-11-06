@@ -57,10 +57,12 @@ test('로그인하면 보던 화면으로 돌아가고, settings 행을 만든�
   await page.getByRole('link', { name: '연도 비교' }).click();
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('연도 비교');
 
-  // 로그아웃하면 다시 로그인 화면
+  // 로그아웃하면 다시 로그인 화면. 이 브라우저만 로그아웃(기존 독서 앱·다른 기기의 로그인은 그대로)
   await page.route('**/auth/v1/logout**', (route) => route.fulfill({ status: 204, body: '' }));
+  const logout = page.waitForRequest('**/auth/v1/logout**');
   await openMenuIfCollapsed(page);
   await page.getByRole('button', { name: '로그아웃' }).click();
+  expect(new URL((await logout).url()).searchParams.get('scope')).toBe('local');
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('책장으로 돌아오신 걸 환영해요');
 });
 

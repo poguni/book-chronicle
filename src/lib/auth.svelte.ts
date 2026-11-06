@@ -7,6 +7,8 @@ class Auth {
   session = $state<Session | null>(null);
   /** 저장된 세션을 확인했는지 (확인 전에는 로그인 화면을 깜빡 보여 주지 않음) */
   ready = $state(false);
+  /** 서버에서 로그인이 끝나 로그인 화면으로 돌아왔는지 (로그인 화면에 안내를 보여 줌) */
+  expired = $state(false);
   userId = $derived(this.session?.user.id ?? null);
 
   constructor() {
@@ -21,14 +23,25 @@ class Auth {
   async signIn(email: string, password: string): Promise<string | null> {
     try {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (!error) this.expired = false;
       return error ? loginErrorMessage(error) : null;
     } catch {
       return loginErrorMessage({ status: 0 });
     }
   }
 
+  /**
+   * 이 브라우저에서만 로그아웃합니다. 기본값(global)은 같은 계정의 다른 기기·기존 독서 앱의
+   * 로그인까지 모두 끊으므로 쓰지 않습니다.
+   */
   async signOut(): Promise<void> {
-    await supabase.auth.signOut();
+    await supabase.auth.signOut({ scope: 'local' });
+  }
+
+  /** 서버에서 로그인이 끝났을 때(다른 곳의 전체 로그아웃 등): 저장된 세션을 지우고 로그인 화면으로 */
+  async expire(): Promise<void> {
+    this.expired = true;
+    await supabase.auth.signOut({ scope: 'local' });
   }
 }
 

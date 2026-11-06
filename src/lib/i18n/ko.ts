@@ -585,5 +585,6 @@ export const ko = {
     errorNetwork: '연결을 확인해 주세요. 잠시 뒤 다시 시도할 수 있어요',
     errorTooMany: '시도가 많았어요. 잠시 기다린 뒤 다시 로그인해 주세요',
     errorUnknown: '로그인이 잠시 안 돼요. 잠시 뒤 다시 시도해 주세요',
+    expired: '로그인이 끝났어요. 다시 로그인해 주세요',
   },
 } as const;

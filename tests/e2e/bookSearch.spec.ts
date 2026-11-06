@@ -163,6 +163,25 @@ test('앱 주인이 아니면 검색을 쓸 수 없다고 알려 준다', async 
   expect(api.calls).toHaveLength(1);
 });
 
+test('서버에서 로그인이 끝났으면 한 번 새로 받아 보고, 그래도 안 되면 로그인 화면으로 돌아간다', async ({
+  page,
+}) => {
+  const api = await fakeBooks(page, { status: 401, error: 'login_required' });
+  await loginAs(page);
+  const refreshes: string[] = [];
+  page.on('request', (req) => {
+    if (req.url().includes('grant_type=refresh_token')) refreshes.push(req.url());
+  });
+  await page.route('**/auth/v1/logout**', (route) => route.fulfill({ status: 204, body: '' }));
+  const dialog = await openAdd(page);
+  await dialog.getByRole('searchbox', { name: '책 찾기' }).fill('작별');
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('책장으로 돌아오신 걸 환영해요');
+  await expect(page.getByRole('status')).toHaveText('로그인이 끝났어요. 다시 로그인해 주세요');
+  // 새 토큰으로 한 번만 다시 묻고 멈춘다
+  expect(refreshes).toHaveLength(1);
+  expect(api.calls).toHaveLength(2);
+});
+
 test('책 찾기 칸에 입력을 시작하면 검색 함수를 한 번만 미리 깨운다', async ({ page }) => {
   const api = await fakeBooks(page);
   await loginAs(page);

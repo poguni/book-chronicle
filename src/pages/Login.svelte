@@ -67,6 +67,10 @@
       />
     </label>
 
+    {#if auth.expired && !error}
+      <p class="notice" role="status">{ko.login.expired}</p>
+    {/if}
+
     <div class="error" id="loginError" role="alert">
       {#if error}
         <svg
@@ -179,6 +183,11 @@
   }
   .error:empty {
     display: none;
+  }
+  .notice {
+    font-size: 14px;
+    color: var(--text);
+    margin: -8px 0;
   }
   .btn-primary {
     height: 48px;
